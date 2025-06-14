@@ -7,11 +7,11 @@ import 'breadcrumb_navigation.dart';
 
 class MobileDrillDownView extends StatefulWidget {
   final TaskManager taskManager;
-  final Function(String, {String? title, bool? isCompleted}) onUpdateTask;
-  final Function(String) onDeleteTask;
+  final Function(int, {String? title, bool? isCompleted}) onUpdateTask;
+  final Function(int) onDeleteTask;
   final Function(Task) onStartEditing;
   final Function() onFinishEditing;
-  final String? editingTaskId;
+  final int? editingTaskId;
   final TextEditingController editController;
   final Function(String?) onAddTask;
 
@@ -36,8 +36,8 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
   List<Task?> _breadcrumbs = [null];
   bool _isDragging = false;
 
-  List<Task> get _currentTasks {
-    return widget.taskManager.getTasksAtLevel(_currentParent?.id);
+  Future<List<Task>> get _currentTasks {
+    return widget.taskManager.getTasksAtLevel(_currentParent?.id?.toString());
   }
 
   void _navigateToSubtasks(Task parentTask) {
@@ -85,7 +85,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
     }
   }
 
-  void _moveTaskToParent(Task draggedTask) {
+  Future<void> _moveTaskToParent(Task draggedTask) async {
     if (_currentParent == null) return;
 
     try {
@@ -96,7 +96,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
       setState(() {});
 
       final grandparentTask = _currentParent!.parentId != null
-          ? widget.taskManager.findTaskById(_currentParent!.parentId!)
+          ? await widget.taskManager.findTaskById(_currentParent!.parentId!)
           : null;
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -123,8 +123,6 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
 
   @override
   Widget build(BuildContext context) {
-    final tasks = _currentTasks;
-
     return DragTarget<Task>(
       onWillAccept: (_) {
         if (!_isDragging) {
@@ -132,7 +130,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
             _isDragging = true;
           });
         }
-        return false; // Don't actually accept drops here
+        return false;
       },
       onLeave: (_) {
         setState(() {
@@ -200,7 +198,8 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
                           ),
                         ),
                         TextButton.icon(
-                          onPressed: () => widget.onAddTask(_currentParent!.id),
+                          onPressed: () =>
+                              widget.onAddTask(_currentParent!.id.toString()),
                           icon: const Icon(Icons.add, size: 16),
                           label: const Text('Add Subtask'),
                         ),
@@ -216,33 +215,46 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
                     context,
                   ).colorScheme.primaryContainer.withOpacity(0.1),
                 ),
-                child: ListView.builder(
-                  itemCount: tasks.length,
-                  itemBuilder: (context, index) {
-                    final task = tasks[index];
-                    return DragTarget<Task>(
-                      onWillAccept: (data) =>
-                          data != null && data.id != task.id,
-                      onAccept: (draggedTask) => _onTaskDrop(draggedTask, task),
-                      builder: (context, candidateData, rejectedData) {
-                        return TaskTile(
-                          key: ValueKey(task.id),
-                          task: task,
-                          isEditing: widget.editingTaskId == task.id,
-                          editController: widget.editController,
-                          onTap: task.hasSubtasks
-                              ? () => _navigateToSubtasks(task)
-                              : null,
-                          onEdit: () => widget.onStartEditing(task),
-                          onDelete: () => widget.onDeleteTask(task.id),
-                          onCheckboxChanged: (_) => widget.onUpdateTask(
-                            task.id,
-                            isCompleted: !task.isCompleted,
-                          ),
-                          onEditComplete: widget.onFinishEditing,
-                          isDragTarget: candidateData.isNotEmpty,
-                          onDragAccept: (draggedTask) =>
+                child: FutureBuilder<List<Task>>(
+                  future: _currentTasks,
+                  builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      return Center(child: Text('Error: ${snapshot.error}'));
+                    }
+                    if (!snapshot.hasData) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    final tasks = snapshot.data!;
+                    return ListView.builder(
+                      itemCount: tasks.length,
+                      itemBuilder: (context, index) {
+                        final task = tasks[index];
+                        return DragTarget<Task>(
+                          onWillAccept: (data) =>
+                              data != null && data.id != task.id,
+                          onAccept: (draggedTask) =>
                               _onTaskDrop(draggedTask, task),
+                          builder: (context, candidateData, rejectedData) {
+                            return TaskTile(
+                              key: ValueKey(task.id),
+                              task: task,
+                              isEditing: widget.editingTaskId == task.id,
+                              editController: widget.editController,
+                              onTap: task.hasSubtasks
+                                  ? () => _navigateToSubtasks(task)
+                                  : null,
+                              onEdit: () => widget.onStartEditing(task),
+                              onDelete: () => widget.onDeleteTask(task.id),
+                              onCheckboxChanged: (_) => widget.onUpdateTask(
+                                task.id,
+                                isCompleted: !task.isCompleted,
+                              ),
+                              onEditComplete: widget.onFinishEditing,
+                              isDragTarget: candidateData.isNotEmpty,
+                              onDragAccept: (draggedTask) =>
+                                  _onTaskDrop(draggedTask, task),
+                            );
+                          },
                         );
                       },
                     );

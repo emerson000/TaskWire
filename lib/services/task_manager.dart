@@ -1,112 +1,85 @@
-import '../models/task.dart';
+import '../models/task.dart' as domain;
+import '../repositories/task_repository.dart';
+import '../database/database.dart';
 
 class TaskManager {
-  List<Task> _rootTasks = [];
-  static int _taskCounter = 0;
+  late final TaskRepository _repository;
 
-  List<Task> get rootTasks => List.unmodifiable(_rootTasks);
-
-  String _generateTaskId() {
-    _taskCounter++;
-    return 'task_$_taskCounter';
+  TaskManager() {
+    final database = AppDatabase();
+    _repository = TaskRepository(database);
   }
 
-  Task createTask(String title, {String? parentId}) {
-    final task = Task(
-      id: _generateTaskId(),
-      title: title,
-    );
+  Future<List<domain.Task>> get rootTasks async =>
+      await _repository.getRootTasks();
 
+  Future<domain.Task> createTask(String title, {int? parentId}) async {
     if (parentId != null) {
-      final parent = findTaskById(parentId);
-      if (parent != null) {
-        parent.addSubtask(task);
-      } else {
+      final parent = await _repository.getTaskById(parentId);
+      if (parent == null) {
         throw ArgumentError('Parent task not found: $parentId');
       }
-    } else {
-      _rootTasks.add(task);
     }
 
-    return task;
+    return await _repository.createTask(title, parentId: parentId);
   }
 
-  void deleteTask(String taskId) {
-    final task = findTaskById(taskId);
-    if (task == null) return;
-
-    if (task.parentId != null) {
-      final parent = findTaskById(task.parentId!);
-      parent?.removeSubtask(task);
-    } else {
-      _rootTasks.remove(task);
-    }
+  Future<void> deleteTask(int taskId) async {
+    await _repository.deleteTask(taskId);
   }
 
-  void updateTask(String taskId, {String? title, bool? isCompleted}) {
-    final task = findTaskById(taskId);
-    if (task == null) return;
-
-    if (title != null) task.title = title;
-    if (isCompleted != null) task.isCompleted = isCompleted;
-    task.updatedAt = DateTime.now();
+  Future<void> updateTask(
+    int taskId, {
+    String? title,
+    bool? isCompleted,
+  }) async {
+    await _repository.updateTask(
+      taskId,
+      title: title,
+      isCompleted: isCompleted,
+    );
   }
 
-  Task? findTaskById(String taskId) {
-    for (Task task in _rootTasks) {
-      Task? found = task.findTaskById(taskId);
-      if (found != null) return found;
-    }
-    return null;
+  Future<domain.Task?> findTaskById(int taskId) async {
+    return await _repository.getTaskById(taskId);
   }
 
-  void moveTaskToParent(String taskId, String? newParentId) {
-    final task = findTaskById(taskId);
-    if (task == null) return;
-
-    if (task.parentId != null) {
-      final oldParent = findTaskById(task.parentId!);
-      oldParent?.removeSubtask(task);
-    } else {
-      _rootTasks.remove(task);
-    }
-
+  Future<void> moveTaskToParent(int taskId, int? newParentId) async {
     if (newParentId != null) {
-      final newParent = findTaskById(newParentId);
-      if (newParent != null) {
-        if (_wouldCreateCycle(taskId, newParentId)) {
-          throw ArgumentError('Cannot move task: would create a cycle');
-        }
-        newParent.addSubtask(task);
-      } else {
+      if (await _wouldCreateCycle(taskId, newParentId)) {
+        throw ArgumentError('Cannot move task: would create a cycle');
+      }
+
+      final newParent = await _repository.getTaskById(newParentId);
+      if (newParent == null) {
         throw ArgumentError('New parent task not found: $newParentId');
       }
-    } else {
-      task.parentId = null;
-      _rootTasks.add(task);
     }
+
+    await _repository.moveTaskToParent(taskId, newParentId);
   }
 
-  bool _wouldCreateCycle(String taskId, String potentialParentId) {
-    final task = findTaskById(taskId);
-    if (task == null) return false;
+  Future<bool> _wouldCreateCycle(int taskId, int newParentId) async {
+    if (taskId == newParentId) return true;
 
-    final descendants = task.getAllDescendants();
-    return descendants.any((descendant) => descendant.id == potentialParentId);
+    final descendants = await _repository.getAllDescendants(taskId);
+    return descendants.any((task) => task.id == newParentId);
   }
 
-  List<Task> getTasksAtLevel(String? parentId) {
+  Future<List<domain.Task>> getTasksAtLevel(String? parentId) async {
     if (parentId == null) {
-      return List.from(_rootTasks);
+      return await _repository.getRootTasks();
     }
 
-    final parent = findTaskById(parentId);
-    return parent?.subtasks ?? [];
+    return await _repository.getSubtasks(int.parse(parentId));
   }
 
-  void reorderTasks(String? parentId, int oldIndex, int newIndex) {
-    List<Task> tasks =
-        parentId == null ? _rootTasks : findTaskById(parentId)?.subtasks ?? [];
+  Future<void> reorderTasks(
+    String? parentId,
+    int oldIndex,
+    int newIndex,
+  ) async {
+    final tasks = await getTasksAtLevel(parentId);
 
     if (oldIndex < 0 ||
         oldIndex >= tasks.length ||
@@ -117,31 +90,5 @@ class TaskManager {
 
     final task = tasks.removeAt(oldIndex);
     tasks.insert(newIndex, task);
-  }
-
-  void loadSampleData() {
-    _rootTasks.clear();
-    _taskCounter = 0;
-
-    final task1 = createTask('Plan vacation');
-    final task2 = createTask('Work project');
-    final task3 = createTask('Personal goals');
-
-    createTask('Research destinations', parentId: task1.id);
-    createTask('Book flights', parentId: task1.id);
-    final accommodation = createTask('Find accommodation', parentId: task1.id);
-    createTask('Hotels', parentId: accommodation.id);
-    createTask('Airbnb options', parentId: accommodation.id);
-
-    createTask('Complete feature X', parentId: task2.id);
-    final testing = createTask('Testing phase', parentId: task2.id);
-    createTask('Unit tests', parentId: testing.id);
-    createTask('Integration tests', parentId: testing.id);
-    createTask('Deploy to production', parentId: task2.id);
-
-    createTask('Exercise routine', parentId: task3.id);
-    final learning = createTask('Learn new skill', parentId: task3.id);
-    createTask('Choose online course', parentId: learning.id);
-    createTask('Practice daily', parentId: learning.id);
   }
 }

@@ -1,10 +1,10 @@
 import 'package:flutter/foundation.dart';
 
 class Task {
-  String id;
+  int id;
   String title;
   bool isCompleted;
-  String? parentId;
+  int? parentId;
   List<Task> subtasks;
   DateTime createdAt;
   DateTime updatedAt;
@@ -17,9 +17,9 @@ class Task {
     List<Task>? subtasks,
     DateTime? createdAt,
     DateTime? updatedAt,
-  })  : subtasks = subtasks ?? [],
-        createdAt = createdAt ?? DateTime.now(),
-        updatedAt = updatedAt ?? DateTime.now();
+  }) : subtasks = subtasks ?? [],
+       createdAt = createdAt ?? DateTime.now(),
+       updatedAt = updatedAt ?? DateTime.now();
 
   bool get hasSubtasks => subtasks.isNotEmpty;
 
@@ -37,7 +37,7 @@ class Task {
     updatedAt = DateTime.now();
   }
 
-  Task? findTaskById(String taskId) {
+  Task? findTaskById(int taskId) {
     if (id == taskId) return this;
 
     for (Task subtask in subtasks) {
@@ -58,10 +58,10 @@ class Task {
   }
 
   Task copyWith({
-    String? id,
+    int? id,
     String? title,
     bool? isCompleted,
-    String? parentId,
+    int? parentId,
     List<Task>? subtasks,
     DateTime? createdAt,
     DateTime? updatedAt,

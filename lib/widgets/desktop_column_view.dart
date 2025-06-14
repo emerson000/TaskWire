@@ -5,11 +5,11 @@ import 'task_tile.dart';
 
 class DesktopColumnView extends StatefulWidget {
   final TaskManager taskManager;
-  final Function(String, {String? title, bool? isCompleted}) onUpdateTask;
-  final Function(String) onDeleteTask;
+  final Function(int, {String? title, bool? isCompleted}) onUpdateTask;
+  final Function(int) onDeleteTask;
   final Function(Task) onStartEditing;
   final Function() onFinishEditing;
-  final String? editingTaskId;
+  final int? editingTaskId;
   final TextEditingController editController;
   final Function(String?) onAddTask;
 
@@ -39,42 +39,48 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
     super.dispose();
   }
 
-  void _navigateToSubtasks(Task parentTask) {
-    setState(() {
-      final existingIndex = _columnHierarchy.indexOf(parentTask);
-      if (existingIndex != -1) {
-        // Task already exists in hierarchy, trim to that point
+  Future<void> _navigateToSubtasks(Task parentTask) async {
+    final existingIndex = _columnHierarchy.indexOf(parentTask);
+    if (existingIndex != -1) {
+      // Task already exists in hierarchy, trim to that point
+      setState(() {
         _columnHierarchy = _columnHierarchy.sublist(0, existingIndex + 1);
-      } else {
-        // Check if this is a root-level task (parent is null)
-        if (parentTask.parentId == null) {
-          // Reset hierarchy for root-level tasks
+      });
+    } else {
+      // Check if this is a root-level task (parent is null)
+      if (parentTask.parentId == null) {
+        // Reset hierarchy for root-level tasks
+        setState(() {
           _columnHierarchy = [null];
-        } else {
-          // For nested tasks, find the correct insertion point
-          // Remove any columns that are not ancestors of this task
-          List<Task?> newHierarchy = [null];
-          Task? currentTask = parentTask;
-          List<Task> ancestors = [];
+        });
+      } else {
+        // For nested tasks, find the correct insertion point
+        // Remove any columns that are not ancestors of this task
+        List<Task?> newHierarchy = [null];
+        Task? currentTask = parentTask;
+        List<Task> ancestors = [];
 
-          // Build ancestor chain
-          while (currentTask != null) {
-            ancestors.insert(0, currentTask);
-            currentTask = currentTask.parentId != null
-                ? widget.taskManager.findTaskById(currentTask.parentId!)
-                : null;
-          }
-
-          // Add ancestors to hierarchy (excluding the target task itself)
-          for (int i = 0; i < ancestors.length - 1; i++) {
-            newHierarchy.add(ancestors[i]);
-          }
-
-          _columnHierarchy = newHierarchy;
+        // Build ancestor chain
+        while (currentTask != null) {
+          ancestors.insert(0, currentTask);
+          currentTask = currentTask.parentId != null
+              ? await widget.taskManager.findTaskById(currentTask.parentId!)
+              : null;
         }
-        _columnHierarchy.add(parentTask);
+
+        // Add ancestors to hierarchy (excluding the target task itself)
+        for (int i = 0; i < ancestors.length - 1; i++) {
+          newHierarchy.add(ancestors[i]);
+        }
+
+        setState(() {
+          _columnHierarchy = newHierarchy;
+        });
       }
-    });
+      setState(() {
+        _columnHierarchy.add(parentTask);
+      });
+    }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scrollController.animateTo(
@@ -100,8 +106,9 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content:
-              Text('"${draggedTask.title}" moved to "${targetTask.title}"'),
+          content: Text(
+            '"${draggedTask.title}" moved to "${targetTask.title}"',
+          ),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -109,37 +116,22 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-              'Cannot move task: ${e.toString().replaceAll('ArgumentError: ', '')}'),
+            'Cannot move task: ${e.toString().replaceAll('ArgumentError: ', '')}',
+          ),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            controller: _scrollController,
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: _buildColumns(),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  List<Widget> _buildColumns() {
+  Future<List<Widget>> _buildColumns() async {
     List<Widget> columns = [];
 
     for (int i = 0; i < _columnHierarchy.length; i++) {
       final parent = _columnHierarchy[i];
-      final tasks = widget.taskManager.getTasksAtLevel(parent?.id);
+      final tasks = await widget.taskManager.getTasksAtLevel(
+        parent?.id?.toString(),
+      );
       final isLastColumn = i == _columnHierarchy.length - 1;
 
       columns.add(
@@ -152,16 +144,40 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
       );
 
       if (!isLastColumn) {
-        columns.add(
-          Container(
-            width: 1,
-            color: Theme.of(context).dividerColor,
-          ),
-        );
+        columns.add(Container(width: 1, color: Theme.of(context).dividerColor));
       }
     }
 
     return columns;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            controller: _scrollController,
+            scrollDirection: Axis.horizontal,
+            child: FutureBuilder<List<Widget>>(
+              future: _buildColumns(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: snapshot.data!,
+                );
+              },
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildColumn({
@@ -182,15 +198,19 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
               onWillAccept: (data) => data != null,
               onAccept: (draggedTask) {
                 try {
-                  widget.taskManager
-                      .moveTaskToParent(draggedTask.id, parent?.id);
+                  widget.taskManager.moveTaskToParent(
+                    draggedTask.id,
+                    parent?.id,
+                  );
                   setState(() {});
 
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(parent != null
-                          ? '"${draggedTask.title}" moved to "${parent.title}"'
-                          : '"${draggedTask.title}" moved to root level'),
+                      content: Text(
+                        parent != null
+                            ? '"${draggedTask.title}" moved to "${parent.title}"'
+                            : '"${draggedTask.title}" moved to root level',
+                      ),
                       duration: const Duration(seconds: 2),
                     ),
                   );
@@ -198,7 +218,8 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                          'Cannot move task: ${e.toString().replaceAll('ArgumentError: ', '')}'),
+                        'Cannot move task: ${e.toString().replaceAll('ArgumentError: ', '')}',
+                      ),
                       backgroundColor: Theme.of(context).colorScheme.error,
                     ),
                   );
@@ -208,10 +229,9 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                 return Container(
                   decoration: BoxDecoration(
                     color: candidateData.isNotEmpty
-                        ? Theme.of(context)
-                            .colorScheme
-                            .primaryContainer
-                            .withOpacity(0.1)
+                        ? Theme.of(
+                            context,
+                          ).colorScheme.primaryContainer.withOpacity(0.1)
                         : null,
                   ),
                   child: ListView.builder(
@@ -230,13 +250,14 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                             isEditing: widget.editingTaskId == task.id,
                             editController: widget.editController,
                             onTap: task.hasSubtasks
-                                ? () => _navigateToSubtasks(task)
+                                ? () async => await _navigateToSubtasks(task)
                                 : null,
                             onEdit: () => widget.onStartEditing(task),
                             onDelete: () => widget.onDeleteTask(task.id),
                             onCheckboxChanged: (_) => widget.onUpdateTask(
-                                task.id,
-                                isCompleted: !task.isCompleted),
+                              task.id,
+                              isCompleted: !task.isCompleted,
+                            ),
                             onEditComplete: widget.onFinishEditing,
                             isDragTarget: candidateData.isNotEmpty,
                             onDragAccept: (draggedTask) =>
@@ -261,10 +282,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         border: Border(
-          bottom: BorderSide(
-            color: Theme.of(context).dividerColor,
-            width: 0.5,
-          ),
+          bottom: BorderSide(color: Theme.of(context).dividerColor, width: 0.5),
         ),
       ),
       child: Row(
@@ -278,16 +296,18 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
           Expanded(
             child: Text(
               parent?.title ?? 'All Tasks',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               overflow: TextOverflow.ellipsis,
             ),
           ),
           if (parent != null)
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 8.0,
+                vertical: 4.0,
+              ),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.primaryContainer,
                 borderRadius: BorderRadius.circular(12.0),
@@ -303,7 +323,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
             ),
           IconButton(
             icon: const Icon(Icons.add),
-            onPressed: () => widget.onAddTask(parent?.id),
+            onPressed: () => widget.onAddTask(parent?.id?.toString()),
             tooltip: parent != null
                 ? 'Add subtask to ${parent.title}'
                 : 'Add new task',

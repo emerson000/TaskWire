@@ -14,7 +14,7 @@ class ListPage extends StatefulWidget {
 
 class _ListPageState extends State<ListPage> {
   final TaskManager _taskManager = TaskManager();
-  String? _editingTaskId;
+  int? _editingTaskId;
   final TextEditingController _editController = TextEditingController();
   final TextEditingController _newTaskController = TextEditingController();
   bool _showAddTask = false;
@@ -24,7 +24,11 @@ class _ListPageState extends State<ListPage> {
   @override
   void initState() {
     super.initState();
-    _taskManager.loadSampleData();
+    _initializeData();
+  }
+
+  Future<void> _initializeData() async {
+    setState(() {});
   }
 
   @override
@@ -38,13 +42,13 @@ class _ListPageState extends State<ListPage> {
     return MediaQuery.of(context).size.width >= _desktopBreakpoint;
   }
 
-  void _addTask(String? parentId) {
+  Future<void> _addTask(String? parentId) async {
     if (_newTaskController.text.trim().isEmpty) return;
 
     try {
-      _taskManager.createTask(
+      await _taskManager.createTask(
         _newTaskController.text.trim(),
-        parentId: parentId,
+        parentId: parentId != null ? int.parse(parentId) : null,
       );
       _newTaskController.clear();
       setState(() {
@@ -57,8 +61,8 @@ class _ListPageState extends State<ListPage> {
     }
   }
 
-  void _deleteTask(String taskId) {
-    final task = _taskManager.findTaskById(taskId);
+  Future<void> _deleteTask(int taskId) async {
+    final task = await _taskManager.findTaskById(taskId);
     if (task == null) return;
 
     showDialog(
@@ -72,8 +76,8 @@ class _ListPageState extends State<ListPage> {
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
-              _taskManager.deleteTask(taskId);
+            onPressed: () async {
+              await _taskManager.deleteTask(taskId);
               setState(() {});
               Navigator.pop(context);
             },
@@ -91,9 +95,9 @@ class _ListPageState extends State<ListPage> {
     });
   }
 
-  void _finishEditing() {
+  Future<void> _finishEditing() async {
     if (_editingTaskId != null && _editController.text.trim().isNotEmpty) {
-      _taskManager.updateTask(
+      await _taskManager.updateTask(
         _editingTaskId!,
         title: _editController.text.trim(),
       );
@@ -103,8 +107,16 @@ class _ListPageState extends State<ListPage> {
     });
   }
 
-  void _updateTask(String taskId, {String? title, bool? isCompleted}) {
-    _taskManager.updateTask(taskId, title: title, isCompleted: isCompleted);
+  Future<void> _updateTask(
+    int taskId, {
+    String? title,
+    bool? isCompleted,
+  }) async {
+    await _taskManager.updateTask(
+      taskId,
+      title: title,
+      isCompleted: isCompleted,
+    );
     setState(() {});
   }
 
@@ -150,26 +162,31 @@ class _ListPageState extends State<ListPage> {
     );
   }
 
-  void _showAddTaskDialog(String? parentId) {
-    final parentTask =
-        parentId != null ? _taskManager.findTaskById(parentId) : null;
+  Future<void> _showAddTaskDialog(String? parentId) async {
+    Task? parentTask;
+    if (parentId != null) {
+      parentTask = await _taskManager.findTaskById(int.parse(parentId));
+    }
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(parentTask != null
-            ? 'Add Subtask to "${parentTask.title}"'
-            : 'Add New Task'),
+        title: Text(
+          parentTask != null
+              ? 'Add Subtask to "${parentTask.title}"'
+              : 'Add New Task',
+        ),
         content: TextField(
           controller: _newTaskController,
           autofocus: true,
           decoration: InputDecoration(
-            hintText:
-                parentTask != null ? 'Enter subtask title' : 'Enter task title',
+            hintText: parentTask != null
+                ? 'Enter subtask title'
+                : 'Enter task title',
             border: const OutlineInputBorder(),
           ),
-          onSubmitted: (_) {
-            _addTask(parentId);
+          onSubmitted: (_) async {
+            await _addTask(parentId);
             Navigator.pop(context);
           },
         ),
@@ -182,8 +199,8 @@ class _ListPageState extends State<ListPage> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              _addTask(parentId);
+            onPressed: () async {
+              await _addTask(parentId);
               Navigator.pop(context);
             },
             child: const Text('Add'),
