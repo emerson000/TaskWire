@@ -34,6 +34,7 @@ class MobileDrillDownView extends StatefulWidget {
 class _MobileDrillDownViewState extends State<MobileDrillDownView> {
   Task? _currentParent;
   List<Task?> _breadcrumbs = [null];
+  bool _isDragging = false;
 
   List<Task> get _currentTasks {
     return widget.taskManager.getTasksAtLevel(_currentParent?.id);
@@ -66,8 +67,9 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content:
-              Text('"${draggedTask.title}" moved to "${targetTask.title}"'),
+          content: Text(
+            '"${draggedTask.title}" moved to "${targetTask.title}"',
+          ),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -75,7 +77,44 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-              'Cannot move task: ${e.toString().replaceAll('ArgumentError: ', '')}'),
+            'Cannot move task: ${e.toString().replaceAll('ArgumentError: ', '')}',
+          ),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    }
+  }
+
+  void _moveTaskToParent(Task draggedTask) {
+    if (_currentParent == null) return;
+
+    try {
+      widget.taskManager.moveTaskToParent(
+        draggedTask.id,
+        _currentParent!.parentId,
+      );
+      setState(() {});
+
+      final grandparentTask = _currentParent!.parentId != null
+          ? widget.taskManager.findTaskById(_currentParent!.parentId!)
+          : null;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            grandparentTask != null
+                ? '"${draggedTask.title}" moved to "${grandparentTask.title}"'
+                : '"${draggedTask.title}" moved to root level',
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Cannot move task: ${e.toString().replaceAll('ArgumentError: ', '')}',
+          ),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -86,72 +125,134 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
   Widget build(BuildContext context) {
     final tasks = _currentTasks;
 
-    return Column(
-      children: [
-        BreadcrumbNavigation(
-          breadcrumbs: _breadcrumbs,
-          onNavigate: _navigateUp,
-        ),
-        if (_currentParent != null)
-          Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Subtasks of "${_currentParent!.title}"',
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
-                ),
-                TextButton.icon(
-                  onPressed: () => widget.onAddTask(_currentParent!.id),
-                  icon: const Icon(Icons.add, size: 16),
-                  label: const Text('Add Subtask'),
-                ),
-              ],
+    return DragTarget<Task>(
+      onWillAccept: (_) {
+        if (!_isDragging) {
+          setState(() {
+            _isDragging = true;
+          });
+        }
+        return false; // Don't actually accept drops here
+      },
+      onLeave: (_) {
+        setState(() {
+          _isDragging = false;
+        });
+      },
+      builder: (context, candidateData, rejectedData) {
+        return Column(
+          children: [
+            BreadcrumbNavigation(
+              breadcrumbs: _breadcrumbs,
+              onNavigate: _navigateUp,
             ),
-          ),
-        Expanded(
-          child: Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context)
-                  .colorScheme
-                  .primaryContainer
-                  .withOpacity(0.1),
-            ),
-            child: ListView.builder(
-              itemCount: tasks.length,
-              itemBuilder: (context, index) {
-                final task = tasks[index];
-                return DragTarget<Task>(
-                  onWillAccept: (data) => data != null && data.id != task.id,
-                  onAccept: (draggedTask) => _onTaskDrop(draggedTask, task),
-                  builder: (context, candidateData, rejectedData) {
-                    return TaskTile(
-                      key: ValueKey(task.id),
-                      task: task,
-                      isEditing: widget.editingTaskId == task.id,
-                      editController: widget.editController,
-                      onTap: task.hasSubtasks
-                          ? () => _navigateToSubtasks(task)
+            if (_currentParent != null)
+              DragTarget<Task>(
+                onWillAccept: (data) =>
+                    data != null && data.parentId == _currentParent!.id,
+                onAccept: (draggedTask) => _moveTaskToParent(draggedTask),
+                builder: (context, candidateData, rejectedData) {
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0,
+                      vertical: 8.0,
+                    ),
+                    decoration: BoxDecoration(
+                      color: candidateData.isNotEmpty
+                          ? Theme.of(
+                              context,
+                            ).colorScheme.primaryContainer.withOpacity(0.3)
                           : null,
-                      onEdit: () => widget.onStartEditing(task),
-                      onDelete: () => widget.onDeleteTask(task.id),
-                      onCheckboxChanged: (_) => widget.onUpdateTask(task.id,
-                          isCompleted: !task.isCompleted),
-                      onEditComplete: widget.onFinishEditing,
-                      isDragTarget: candidateData.isNotEmpty,
-                      onDragAccept: (draggedTask) =>
-                          _onTaskDrop(draggedTask, task),
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Subtasks of "${_currentParent!.title}"',
+                                style: Theme.of(context).textTheme.titleSmall,
+                              ),
+                              if (_isDragging)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4.0),
+                                  child: Text(
+                                    'Move to "${_currentParent!.title}"',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: candidateData.isNotEmpty
+                                          ? Theme.of(
+                                              context,
+                                            ).colorScheme.primary
+                                          : Theme.of(
+                                              context,
+                                            ).colorScheme.onSurfaceVariant,
+                                      fontWeight: candidateData.isNotEmpty
+                                          ? FontWeight.w600
+                                          : FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        TextButton.icon(
+                          onPressed: () => widget.onAddTask(_currentParent!.id),
+                          icon: const Icon(Icons.add, size: 16),
+                          label: const Text('Add Subtask'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primaryContainer.withOpacity(0.1),
+                ),
+                child: ListView.builder(
+                  itemCount: tasks.length,
+                  itemBuilder: (context, index) {
+                    final task = tasks[index];
+                    return DragTarget<Task>(
+                      onWillAccept: (data) =>
+                          data != null && data.id != task.id,
+                      onAccept: (draggedTask) => _onTaskDrop(draggedTask, task),
+                      builder: (context, candidateData, rejectedData) {
+                        return TaskTile(
+                          key: ValueKey(task.id),
+                          task: task,
+                          isEditing: widget.editingTaskId == task.id,
+                          editController: widget.editController,
+                          onTap: task.hasSubtasks
+                              ? () => _navigateToSubtasks(task)
+                              : null,
+                          onEdit: () => widget.onStartEditing(task),
+                          onDelete: () => widget.onDeleteTask(task.id),
+                          onCheckboxChanged: (_) => widget.onUpdateTask(
+                            task.id,
+                            isCompleted: !task.isCompleted,
+                          ),
+                          onEditComplete: widget.onFinishEditing,
+                          isDragTarget: candidateData.isNotEmpty,
+                          onDragAccept: (draggedTask) =>
+                              _onTaskDrop(draggedTask, task),
+                        );
+                      },
                     );
                   },
-                );
-              },
+                ),
+              ),
             ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 }
