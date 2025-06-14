@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../models/task.dart';
 import '../services/task_manager.dart';
-import '../widgets/task_tile.dart';
-import '../widgets/breadcrumb_navigation.dart';
+import '../widgets/desktop_column_view.dart';
+import '../widgets/mobile_drill_down_view.dart';
 
 class ListPage extends StatefulWidget {
   const ListPage({super.key});
@@ -14,12 +14,12 @@ class ListPage extends StatefulWidget {
 
 class _ListPageState extends State<ListPage> {
   final TaskManager _taskManager = TaskManager();
-  Task? _currentParent;
-  List<Task?> _breadcrumbs = [null];
   String? _editingTaskId;
   final TextEditingController _editController = TextEditingController();
   final TextEditingController _newTaskController = TextEditingController();
   bool _showAddTask = false;
+
+  static const double _desktopBreakpoint = 800.0;
 
   @override
   void initState() {
@@ -34,40 +34,17 @@ class _ListPageState extends State<ListPage> {
     super.dispose();
   }
 
-  List<Task> get _currentTasks {
-    return _taskManager.getTasksAtLevel(_currentParent?.id);
+  bool _isDesktop(BuildContext context) {
+    return MediaQuery.of(context).size.width >= _desktopBreakpoint;
   }
 
-  void _navigateToSubtasks(Task parentTask) {
-    setState(() {
-      _currentParent = parentTask;
-      _breadcrumbs.add(parentTask);
-      _editingTaskId = null;
-      _showAddTask = false;
-    });
-  }
-
-  void _navigateUp(Task? targetParent) {
-    setState(() {
-      _currentParent = targetParent;
-
-      final targetIndex = _breadcrumbs.indexOf(targetParent);
-      if (targetIndex != -1) {
-        _breadcrumbs = _breadcrumbs.sublist(0, targetIndex + 1);
-      }
-
-      _editingTaskId = null;
-      _showAddTask = false;
-    });
-  }
-
-  void _addTask() {
+  void _addTask(String? parentId) {
     if (_newTaskController.text.trim().isEmpty) return;
 
     try {
       _taskManager.createTask(
         _newTaskController.text.trim(),
-        parentId: _currentParent?.id,
+        parentId: parentId,
       );
       _newTaskController.clear();
       setState(() {
@@ -80,7 +57,10 @@ class _ListPageState extends State<ListPage> {
     }
   }
 
-  void _deleteTask(Task task) {
+  void _deleteTask(String taskId) {
+    final task = _taskManager.findTaskById(taskId);
+    if (task == null) return;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -93,7 +73,7 @@ class _ListPageState extends State<ListPage> {
           ),
           TextButton(
             onPressed: () {
-              _taskManager.deleteTask(task.id);
+              _taskManager.deleteTask(taskId);
               setState(() {});
               Navigator.pop(context);
             },
@@ -123,96 +103,20 @@ class _ListPageState extends State<ListPage> {
     });
   }
 
-  void _toggleTaskCompletion(Task task) {
-    _taskManager.updateTask(task.id, isCompleted: !task.isCompleted);
+  void _updateTask(String taskId, {String? title, bool? isCompleted}) {
+    _taskManager.updateTask(taskId, title: title, isCompleted: isCompleted);
     setState(() {});
-  }
-
-  void _onTaskDrop(Task draggedTask, Task targetTask) {
-    if (draggedTask.id == targetTask.id) return;
-
-    try {
-      _taskManager.moveTaskToParent(draggedTask.id, targetTask.id);
-      setState(() {});
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content:
-              Text('"${draggedTask.title}" moved to "${targetTask.title}"'),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              'Cannot move task: ${e.toString().replaceAll('ArgumentError: ', '')}'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final tasks = _currentTasks;
+    final isDesktop = _isDesktop(context);
 
     return Scaffold(
-      body: Column(
-        children: [
-          BreadcrumbNavigation(
-            breadcrumbs: _breadcrumbs,
-            onNavigate: _navigateUp,
-          ),
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context)
-                    .colorScheme
-                    .primaryContainer
-                    .withOpacity(0.1),
-              ),
-              child: ListView.builder(
-                itemCount: tasks.length + (_showAddTask ? 1 : 0),
-                itemBuilder: (context, index) {
-                  if (_showAddTask && index == tasks.length) {
-                    return _buildAddTaskTile();
-                  }
-
-                  final task = tasks[index];
-                  return DragTarget<Task>(
-                    onWillAccept: (data) => data != null && data.id != task.id,
-                    onAccept: (draggedTask) => _onTaskDrop(draggedTask, task),
-                    builder: (context, candidateData, rejectedData) {
-                      return TaskTile(
-                        key: ValueKey(task.id),
-                        task: task,
-                        isEditing: _editingTaskId == task.id,
-                        editController: _editController,
-                        onTap: task.hasSubtasks
-                            ? () => _navigateToSubtasks(task)
-                            : null,
-                        onEdit: () => _startEditing(task),
-                        onDelete: () => _deleteTask(task),
-                        onCheckboxChanged: (_) => _toggleTaskCompletion(task),
-                        onEditComplete: _finishEditing,
-                        isDragTarget: candidateData.isNotEmpty,
-                        onDragAccept: (draggedTask) =>
-                            _onTaskDrop(draggedTask, task),
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ),
-        ],
-      ),
+      body: isDesktop ? _buildDesktopView() : _buildMobileView(),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          setState(() {
-            _showAddTask = true;
-          });
+          _showAddTaskDialog(null);
         },
         tooltip: 'Add Task',
         child: const Icon(Icons.add),
@@ -220,39 +124,69 @@ class _ListPageState extends State<ListPage> {
     );
   }
 
-  Widget _buildAddTaskTile() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: Row(
-        children: [
-          const Icon(Icons.add_circle_outline),
-          const SizedBox(width: 16),
-          Expanded(
-            child: TextField(
-              controller: _newTaskController,
-              autofocus: true,
-              decoration: InputDecoration(
-                hintText: _currentParent != null
-                    ? 'Add subtask to "${_currentParent!.title}"'
-                    : 'Add new task',
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 8.0),
-              ),
-              onSubmitted: (_) => _addTask(),
-            ),
+  Widget _buildDesktopView() {
+    return DesktopColumnView(
+      taskManager: _taskManager,
+      onUpdateTask: _updateTask,
+      onDeleteTask: _deleteTask,
+      onStartEditing: _startEditing,
+      onFinishEditing: _finishEditing,
+      editingTaskId: _editingTaskId,
+      editController: _editController,
+      onAddTask: _showAddTaskDialog,
+    );
+  }
+
+  Widget _buildMobileView() {
+    return MobileDrillDownView(
+      taskManager: _taskManager,
+      onUpdateTask: _updateTask,
+      onDeleteTask: _deleteTask,
+      onStartEditing: _startEditing,
+      onFinishEditing: _finishEditing,
+      editingTaskId: _editingTaskId,
+      editController: _editController,
+      onAddTask: _showAddTaskDialog,
+    );
+  }
+
+  void _showAddTaskDialog(String? parentId) {
+    final parentTask =
+        parentId != null ? _taskManager.findTaskById(parentId) : null;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(parentTask != null
+            ? 'Add Subtask to "${parentTask.title}"'
+            : 'Add New Task'),
+        content: TextField(
+          controller: _newTaskController,
+          autofocus: true,
+          decoration: InputDecoration(
+            hintText:
+                parentTask != null ? 'Enter subtask title' : 'Enter task title',
+            border: const OutlineInputBorder(),
           ),
-          IconButton(
-            icon: const Icon(Icons.check),
-            onPressed: _addTask,
-          ),
-          IconButton(
-            icon: const Icon(Icons.close),
+          onSubmitted: (_) {
+            _addTask(parentId);
+            Navigator.pop(context);
+          },
+        ),
+        actions: [
+          TextButton(
             onPressed: () {
               _newTaskController.clear();
-              setState(() {
-                _showAddTask = false;
-              });
+              Navigator.pop(context);
             },
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              _addTask(parentId);
+              Navigator.pop(context);
+            },
+            child: const Text('Add'),
           ),
         ],
       ),
