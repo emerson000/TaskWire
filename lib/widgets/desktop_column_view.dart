@@ -249,9 +249,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                             task: task,
                             isEditing: widget.editingTaskId == task.id,
                             editController: widget.editController,
-                            onTap: task.hasSubtasks
-                                ? () async => await _navigateToSubtasks(task)
-                                : null,
+                            onTap: () async => await _navigateToSubtasks(task),
                             onEdit: () => widget.onStartEditing(task),
                             onDelete: () => widget.onDeleteTask(task.id),
                             onCheckboxChanged: (_) => widget.onUpdateTask(

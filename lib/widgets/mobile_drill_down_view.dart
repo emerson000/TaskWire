@@ -240,9 +240,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
                               task: task,
                               isEditing: widget.editingTaskId == task.id,
                               editController: widget.editController,
-                              onTap: task.hasSubtasks
-                                  ? () => _navigateToSubtasks(task)
-                                  : null,
+                              onTap: () => _navigateToSubtasks(task),
                               onEdit: () => widget.onStartEditing(task),
                               onDelete: () => widget.onDeleteTask(task.id),
                               onCheckboxChanged: (_) => widget.onUpdateTask(
