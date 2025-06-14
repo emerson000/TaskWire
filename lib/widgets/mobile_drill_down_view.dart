@@ -14,6 +14,8 @@ class MobileDrillDownView extends StatefulWidget {
   final int? editingTaskId;
   final TextEditingController editController;
   final Function(String?) onAddTask;
+  final VoidCallback? onRefresh;
+  final int? refreshKey;
 
   const MobileDrillDownView({
     super.key,
@@ -25,6 +27,8 @@ class MobileDrillDownView extends StatefulWidget {
     this.editingTaskId,
     required this.editController,
     required this.onAddTask,
+    this.onRefresh,
+    this.refreshKey,
   });
 
   @override
@@ -45,10 +49,24 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
     _currentTasksFuture = _getCurrentTasks();
   }
 
+
+
   @override
   void initState() {
     super.initState();
     _refreshTasks();
+  }
+
+  @override
+  void didUpdateWidget(MobileDrillDownView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.taskManager != oldWidget.taskManager ||
+        widget.editingTaskId != oldWidget.editingTaskId ||
+        widget.refreshKey != oldWidget.refreshKey) {
+      setState(() {
+        _refreshTasks();
+      });
+    }
   }
 
   void _navigateToSubtasks(Task parentTask) {

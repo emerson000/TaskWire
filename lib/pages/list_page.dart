@@ -18,6 +18,7 @@ class _ListPageState extends State<ListPage> {
   final TextEditingController _editController = TextEditingController();
   final TextEditingController _newTaskController = TextEditingController();
   bool _showAddTask = false;
+  int _refreshCounter = 0;
 
   static const double _desktopBreakpoint = 800.0;
 
@@ -53,6 +54,7 @@ class _ListPageState extends State<ListPage> {
       _newTaskController.clear();
       setState(() {
         _showAddTask = false;
+        _refreshCounter++;
       });
     } catch (e) {
       if (kDebugMode) {
@@ -78,7 +80,9 @@ class _ListPageState extends State<ListPage> {
           TextButton(
             onPressed: () async {
               await _taskManager.deleteTask(taskId);
-              setState(() {});
+              setState(() {
+                _refreshCounter++;
+              });
               Navigator.pop(context);
             },
             child: const Text('Delete'),
@@ -104,6 +108,7 @@ class _ListPageState extends State<ListPage> {
     }
     setState(() {
       _editingTaskId = null;
+      _refreshCounter++;
     });
   }
 
@@ -117,7 +122,9 @@ class _ListPageState extends State<ListPage> {
       title: title,
       isCompleted: isCompleted,
     );
-    setState(() {});
+    setState(() {
+      _refreshCounter++;
+    });
   }
 
   @override
@@ -159,6 +166,7 @@ class _ListPageState extends State<ListPage> {
       editingTaskId: _editingTaskId,
       editController: _editController,
       onAddTask: _showAddTaskDialog,
+      refreshKey: _refreshCounter,
     );
   }
 
