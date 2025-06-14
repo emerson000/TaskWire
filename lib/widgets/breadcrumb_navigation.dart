@@ -4,11 +4,15 @@ import '../models/task.dart';
 class BreadcrumbNavigation extends StatelessWidget {
   final List<Task?> breadcrumbs;
   final Function(Task?) onNavigate;
+  final Function(Task, Task?)? onTaskDrop;
+  final bool isDragging;
 
   const BreadcrumbNavigation({
     super.key,
     required this.breadcrumbs,
     required this.onNavigate,
+    this.onTaskDrop,
+    this.isDragging = false,
   });
 
   @override
@@ -50,29 +54,58 @@ class BreadcrumbNavigation extends StatelessWidget {
       final task = breadcrumbs[i];
       final isLast = i == breadcrumbs.length - 1;
 
-      items.add(
-        GestureDetector(
-          onTap: isLast ? null : () => onNavigate(task),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-            decoration: BoxDecoration(
+      Widget breadcrumbContent = GestureDetector(
+        onTap: isLast ? null : () => onNavigate(task),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+          decoration: BoxDecoration(
+            color: isLast
+                ? Theme.of(context).colorScheme.primaryContainer
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(4.0),
+          ),
+          child: Text(
+            task?.title ?? 'Home',
+            style: TextStyle(
               color: isLast
-                  ? Theme.of(context).colorScheme.primaryContainer
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(4.0),
-            ),
-            child: Text(
-              task?.title ?? 'Home',
-              style: TextStyle(
-                color: isLast
-                    ? Theme.of(context).colorScheme.onPrimaryContainer
-                    : Theme.of(context).colorScheme.primary,
-                fontWeight: isLast ? FontWeight.bold : FontWeight.normal,
-              ),
+                  ? Theme.of(context).colorScheme.onPrimaryContainer
+                  : Theme.of(context).colorScheme.primary,
+              fontWeight: isLast ? FontWeight.bold : FontWeight.normal,
             ),
           ),
         ),
       );
+
+      Widget breadcrumbItem;
+      if (onTaskDrop != null && !isLast) {
+        breadcrumbItem = DragTarget<Task>(
+          onWillAccept: (data) => data != null,
+          onAccept: (draggedTask) => onTaskDrop!(draggedTask, task),
+          builder: (context, candidateData, rejectedData) {
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.all(2.0),
+              decoration: BoxDecoration(
+                color: candidateData.isNotEmpty
+                    ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3)
+                    : null,
+                borderRadius: BorderRadius.circular(6.0),
+                border: candidateData.isNotEmpty
+                    ? Border.all(
+                        color: Theme.of(context).colorScheme.primary,
+                        width: 1.0,
+                      )
+                    : null,
+              ),
+              child: breadcrumbContent,
+            );
+          },
+        );
+      } else {
+        breadcrumbItem = breadcrumbContent;
+      }
+
+      items.add(breadcrumbItem);
 
       if (!isLast) {
         items.add(
