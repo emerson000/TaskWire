@@ -3,29 +3,35 @@ import '../repositories/task_repository.dart';
 import '../database/database.dart';
 
 class TaskManager {
-  late final TaskRepository _repository;
+  TaskRepository? _repository;
+  AppDatabase? _database;
 
-  TaskManager() {
-    final database = AppDatabase();
-    _repository = TaskRepository(database);
+  TaskRepository get _repo {
+    _repository ??= TaskRepository(_db);
+    return _repository!;
+  }
+
+  AppDatabase get _db {
+    _database ??= AppDatabase();
+    return _database!;
   }
 
   Future<List<domain.Task>> get rootTasks async =>
-      await _repository.getRootTasks();
+      await _repo.getRootTasks();
 
   Future<domain.Task> createTask(String title, {int? parentId}) async {
     if (parentId != null) {
-      final parent = await _repository.getTaskById(parentId);
+      final parent = await _repo.getTaskById(parentId);
       if (parent == null) {
         throw ArgumentError('Parent task not found: $parentId');
       }
     }
 
-    return await _repository.createTask(title, parentId: parentId);
+    return await _repo.createTask(title, parentId: parentId);
   }
 
   Future<void> deleteTask(int taskId) async {
-    await _repository.deleteTask(taskId);
+    await _repo.deleteTask(taskId);
   }
 
   Future<void> updateTask(
@@ -33,7 +39,7 @@ class TaskManager {
     String? title,
     bool? isCompleted,
   }) async {
-    await _repository.updateTask(
+    await _repo.updateTask(
       taskId,
       title: title,
       isCompleted: isCompleted,
@@ -41,7 +47,7 @@ class TaskManager {
   }
 
   Future<domain.Task?> findTaskById(int taskId) async {
-    return await _repository.getTaskById(taskId);
+    return await _repo.getTaskById(taskId);
   }
 
   Future<void> moveTaskToParent(int taskId, int? newParentId) async {
@@ -50,28 +56,28 @@ class TaskManager {
         throw ArgumentError('Cannot move task: would create a cycle');
       }
 
-      final newParent = await _repository.getTaskById(newParentId);
+      final newParent = await _repo.getTaskById(newParentId);
       if (newParent == null) {
         throw ArgumentError('New parent task not found: $newParentId');
       }
     }
 
-    await _repository.moveTaskToParent(taskId, newParentId);
+    await _repo.moveTaskToParent(taskId, newParentId);
   }
 
   Future<bool> _wouldCreateCycle(int taskId, int newParentId) async {
     if (taskId == newParentId) return true;
 
-    final descendants = await _repository.getAllDescendants(taskId);
+    final descendants = await _repo.getAllDescendants(taskId);
     return descendants.any((task) => task.id == newParentId);
   }
 
   Future<List<domain.Task>> getTasksAtLevel(String? parentId) async {
     if (parentId == null) {
-      return await _repository.getRootTasks();
+      return await _repo.getRootTasks();
     }
 
-    return await _repository.getSubtasks(int.parse(parentId));
+    return await _repo.getSubtasks(int.parse(parentId));
   }
 
   Future<void> reorderTasks(

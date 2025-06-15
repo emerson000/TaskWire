@@ -106,8 +106,22 @@ class AppDatabase extends _$AppDatabase {
 
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
-    final dbFolder = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dbFolder.path, 'taskwire.db'));
-    return NativeDatabase(file);
+    try {
+      Directory dbFolder;
+      try {
+        dbFolder = await getApplicationDocumentsDirectory();
+      } catch (e) {
+        final tempDir = await getTemporaryDirectory();
+        dbFolder = Directory(p.join(tempDir.path, 'app_data'));
+        if (!await dbFolder.exists()) {
+          await dbFolder.create(recursive: true);
+        }
+      }
+      
+      final file = File(p.join(dbFolder.path, 'taskwire.db'));
+      return NativeDatabase(file);
+    } catch (e) {
+      rethrow;
+    }
   });
 }
