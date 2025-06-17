@@ -8,9 +8,7 @@ void main() async {
   }
 
   final hookFile = File('.git/hooks/pre-commit');
-  final content = Platform.isWindows
-      ? '@echo off\r\ndart version_increment.dart\r\ngit add pubspec.yaml'
-      : '#!/bin/sh\ndart version_increment.dart\ngit add pubspec.yaml';
+  final content = '#!/bin/sh\ndart version_increment.dart\ngit add pubspec.yaml';
 
   await hookFile.writeAsString(content);
   
