@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import '../main.dart';
 import '../models/task.dart';
 import '../services/task_manager.dart';
 import '../widgets/desktop_column_view.dart';
@@ -13,7 +14,7 @@ class ListPage extends StatefulWidget {
 }
 
 class _ListPageState extends State<ListPage> {
-  final TaskManager _taskManager = TaskManager();
+  final TaskManager _taskManager = getIt.get<TaskManager>();
   int? _editingTaskId;
   final TextEditingController _editController = TextEditingController();
   final TextEditingController _newTaskController = TextEditingController();

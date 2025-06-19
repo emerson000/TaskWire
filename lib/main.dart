@@ -1,8 +1,30 @@
 import 'package:flutter/material.dart';
 import 'pages/list_page.dart';
+import 'package:taskwire/database/database.dart';
+import 'package:get_it/get_it.dart';
+import 'package:taskwire/pages/printer_settings_page.dart';
+import 'package:taskwire/repositories/printer_repository.dart';
+import 'package:taskwire/repositories/task_repository.dart';
+import 'package:taskwire/services/task_manager.dart';
+
+final getIt = GetIt.instance;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  final db = AppDatabase();
+
+  // Ensure database is properly initialized
+  await db.close();
+  final newDb = AppDatabase();
+
+  getIt.registerSingleton<AppDatabase>(newDb);
+  getIt.registerSingleton<TaskRepository>(TaskRepository(newDb));
+  getIt.registerSingleton<TaskManager>(
+    TaskManager(getIt.get<TaskRepository>()),
+  );
+  getIt.registerSingleton<PrinterRepository>(PrinterRepository(newDb));
+
   runApp(const MyApp());
 }
 
@@ -89,10 +111,10 @@ class _MyHomePageState extends State<MyHomePage> {
         );
       case 1:
         return const ListPage();
+      case 2:
+        return const PrinterSettingsPage();
       default:
-        return const Center(
-          child: Text('Unknown Page'),
-        );
+        return const Center(child: Text('Unknown Page'));
     }
   }
 
@@ -124,12 +146,40 @@ class _MyHomePageState extends State<MyHomePage> {
         },
         children: [
           NavigationDrawerDestination(
-            icon: Icon(Icons.home, color: _selectedIndex == 0 ? Colors.deepPurple : null),
-            label: Text('Home', style: TextStyle(color: _selectedIndex == 0 ? Colors.deepPurple : null)),
+            icon: Icon(
+              Icons.home,
+              color: _selectedIndex == 0 ? Colors.deepPurple : null,
+            ),
+            label: Text(
+              'Home',
+              style: TextStyle(
+                color: _selectedIndex == 0 ? Colors.deepPurple : null,
+              ),
+            ),
           ),
           NavigationDrawerDestination(
-            icon: Icon(Icons.list, color: _selectedIndex == 1 ? Colors.deepPurple : null),
-            label: Text('Lists', style: TextStyle(color: _selectedIndex == 1 ? Colors.deepPurple : null)),
+            icon: Icon(
+              Icons.list,
+              color: _selectedIndex == 1 ? Colors.deepPurple : null,
+            ),
+            label: Text(
+              'Lists',
+              style: TextStyle(
+                color: _selectedIndex == 1 ? Colors.deepPurple : null,
+              ),
+            ),
+          ),
+          NavigationDrawerDestination(
+            icon: Icon(
+              Icons.print,
+              color: _selectedIndex == 2 ? Colors.deepPurple : null,
+            ),
+            label: Text(
+              'Print Settings',
+              style: TextStyle(
+                color: _selectedIndex == 2 ? Colors.deepPurple : null,
+              ),
+            ),
           ),
         ],
       ),
