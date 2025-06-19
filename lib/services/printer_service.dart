@@ -5,8 +5,31 @@ import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:print_usb/print_usb.dart';
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:flutter/material.dart';
 
 import 'package:flutter_usb_printer/flutter_usb_printer.dart';
+
+enum PrintErrorType {
+  noPrinters,
+  noConnectedPrinters,
+  cancelled,
+  printFailed,
+  exception,
+}
+
+class PrintResult {
+  final bool success;
+  final String? successMessage;
+  final String? errorMessage;
+  final PrintErrorType? errorType;
+
+  const PrintResult({
+    required this.success,
+    this.successMessage,
+    this.errorMessage,
+    this.errorType,
+  });
+}
 
 class PrinterService {
   final PrinterRepository _repository;
@@ -475,5 +498,107 @@ class PrinterService {
     } catch (e) {
       print('Error disconnecting printer: $e');
     }
+  }
+
+  Future<PrintResult> printTasksWithPrinterSelection({
+    required List<Task> tasks,
+    required String? levelTitle,
+    required bool includeSubtasks,
+    required BuildContext context,
+  }) async {
+    try {
+      final printers = await getPrinters();
+      if (printers.isEmpty) {
+        return PrintResult(
+          success: false,
+          errorMessage: 'No printers available. Please add a printer first.',
+          errorType: PrintErrorType.noPrinters,
+        );
+      }
+
+      final connectedPrinters = printers.where((p) => p.isConnected).toList();
+      if (connectedPrinters.isEmpty) {
+        return PrintResult(
+          success: false,
+          errorMessage: 'No connected printers. Please connect a printer first.',
+          errorType: PrintErrorType.noConnectedPrinters,
+        );
+      }
+
+      String? selectedPrinterId;
+      if (connectedPrinters.length == 1) {
+        selectedPrinterId = connectedPrinters.first.id;
+      } else {
+        selectedPrinterId = await _showPrinterSelectionDialog(
+          context,
+          connectedPrinters,
+        );
+        if (selectedPrinterId == null) {
+          return PrintResult(
+            success: false,
+            errorMessage: 'No printer selected.',
+            errorType: PrintErrorType.cancelled,
+          );
+        }
+      }
+
+      final success = includeSubtasks
+          ? await printColumnWithSubtasks(selectedPrinterId!, tasks, columnTitle: levelTitle)
+          : await printColumn(selectedPrinterId!, tasks, columnTitle: levelTitle);
+
+      if (success) {
+        final actionText = includeSubtasks ? 'with subtasks' : '';
+        return PrintResult(
+          success: true,
+          successMessage: 'Level "$levelTitle" $actionText printed successfully',
+        );
+      } else {
+        final actionText = includeSubtasks ? 'with subtasks' : '';
+        return PrintResult(
+          success: false,
+          errorMessage: 'Failed to print level $actionText',
+          errorType: PrintErrorType.printFailed,
+        );
+      }
+    } catch (e) {
+      final actionText = includeSubtasks ? 'with subtasks' : '';
+      return PrintResult(
+        success: false,
+        errorMessage: 'Error printing level $actionText: $e',
+        errorType: PrintErrorType.exception,
+      );
+    }
+  }
+
+  Future<String?> _showPrinterSelectionDialog(
+    BuildContext context,
+    List<Printer> printers,
+  ) async {
+    return showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Printer'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: printers
+              .map(
+                (printer) => ListTile(
+                  title: Text(printer.name),
+                  subtitle: Text(
+                    '${printer.type.name.toUpperCase()}: ${printer.address}',
+                  ),
+                  onTap: () => Navigator.of(context).pop(printer.id),
+                ),
+              )
+              .toList(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
   }
 }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../models/task.dart';
-import '../models/printer.dart';
 import '../services/task_manager.dart';
 import '../services/printer_service.dart';
 import 'task_tile.dart';
@@ -59,58 +58,25 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
         _currentParent?.id?.toString(),
       );
 
-      final printers = await widget.printerService.getPrinters();
-      if (printers.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No printers available. Please add a printer first.'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        return;
-      }
-
-      final connectedPrinters = printers.where((p) => p.isConnected).toList();
-      if (connectedPrinters.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'No connected printers. Please connect a printer first.',
-            ),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        return;
-      }
-
-      String? selectedPrinterId;
-      if (connectedPrinters.length == 1) {
-        selectedPrinterId = connectedPrinters.first.id;
-      } else {
-        selectedPrinterId = await _showPrinterSelectionDialog(
-          connectedPrinters,
-        );
-        if (selectedPrinterId == null) return;
-      }
-
       final levelTitle = _currentParent?.title ?? 'All Tasks';
-      final success = await widget.printerService.printColumn(
-        selectedPrinterId!,
-        tasks,
-        columnTitle: levelTitle,
+      final result = await widget.printerService.printTasksWithPrinterSelection(
+        tasks: tasks,
+        levelTitle: levelTitle,
+        includeSubtasks: false,
+        context: context,
       );
 
-      if (success) {
+      if (result.success) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Level "${levelTitle}" printed successfully'),
+            content: Text(result.successMessage!),
             backgroundColor: Colors.green,
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to print level'),
+          SnackBar(
+            content: Text(result.errorMessage!),
             backgroundColor: Colors.red,
           ),
         );
@@ -131,60 +97,25 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
         _currentParent?.id?.toString(),
       );
 
-      final printers = await widget.printerService.getPrinters();
-      if (printers.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No printers available. Please add a printer first.'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        return;
-      }
-
-      final connectedPrinters = printers.where((p) => p.isConnected).toList();
-      if (connectedPrinters.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'No connected printers. Please connect a printer first.',
-            ),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        return;
-      }
-
-      String? selectedPrinterId;
-      if (connectedPrinters.length == 1) {
-        selectedPrinterId = connectedPrinters.first.id;
-      } else {
-        selectedPrinterId = await _showPrinterSelectionDialog(
-          connectedPrinters,
-        );
-        if (selectedPrinterId == null) return;
-      }
-
       final levelTitle = _currentParent?.title ?? 'All Tasks';
-      final success = await widget.printerService.printColumnWithSubtasks(
-        selectedPrinterId!,
-        tasks,
-        columnTitle: levelTitle,
+      final result = await widget.printerService.printTasksWithPrinterSelection(
+        tasks: tasks,
+        levelTitle: levelTitle,
+        includeSubtasks: true,
+        context: context,
       );
 
-      if (success) {
+      if (result.success) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'Level "${levelTitle}" with subtasks printed successfully',
-            ),
+            content: Text(result.successMessage!),
             backgroundColor: Colors.green,
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to print level with subtasks'),
+          SnackBar(
+            content: Text(result.errorMessage!),
             backgroundColor: Colors.red,
           ),
         );
@@ -197,35 +128,6 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
         ),
       );
     }
-  }
-
-  Future<String?> _showPrinterSelectionDialog(List<Printer> printers) async {
-    return showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Select Printer'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: printers
-              .map(
-                (printer) => ListTile(
-                  title: Text(printer.name),
-                  subtitle: Text(
-                    '${printer.type.name.toUpperCase()}: ${printer.address}',
-                  ),
-                  onTap: () => Navigator.of(context).pop(printer.id),
-                ),
-              )
-              .toList(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
