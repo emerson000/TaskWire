@@ -294,33 +294,68 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
               tooltip: 'Go back',
             ),
           Expanded(
-            child: Text(
-              parent?.title ?? 'All Tasks',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-              overflow: TextOverflow.ellipsis,
+            child: Row(
+              spacing: 8.0,
+              children: [
+                Text(
+                  parent?.title ?? 'All Tasks',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (parent != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8.0,
+                      vertical: 4.0,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(12.0),
+                    ),
+                    child: Text(
+                      '${parent.subtaskCount}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
-          if (parent != null)
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 8.0,
-                vertical: 4.0,
+          MenuAnchor(
+            builder:
+                (
+                  BuildContext context,
+                  MenuController controller,
+                  Widget? child,
+                ) {
+                  return IconButton(
+                    icon: const Icon(Icons.print),
+                    onPressed: () {
+                      if (controller.isOpen) {
+                        controller.close();
+                      } else {
+                        controller.open();
+                      }
+                    },
+                    tooltip: 'Print options',
+                  );
+                },
+            menuChildren: [
+              MenuItemButton(
+                onPressed: () {},
+                child: const Text('Print Column'),
               ),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(12.0),
+              MenuItemButton(
+                onPressed: () {},
+                child: const Text('Print Column & Subtasks'),
               ),
-              child: Text(
-                '${parent.subtaskCount}',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onPrimaryContainer,
-                ),
-              ),
-            ),
+            ],
+          ),
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () => widget.onAddTask(parent?.id?.toString()),
