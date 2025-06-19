@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+    <Package Name="TaskWire"
+             Version="$(var.Version)"
+             Manufacturer="TaskWire"
+             UpgradeCode="16bf25a9-66cb-480c-9093-2bd6e4066503"
+             Compressed="yes"
+             Scope="perUser">
+        
+        <StandardDirectory Id="PerUserProgramFilesFolder">
+            <Directory Id="INSTALLFOLDER" Name="TaskWire" />
+        </StandardDirectory>
+
+        <StandardDirectory Id="ProgramMenuFolder">
+            <Directory Id="ApplicationProgramsFolder" Name="TaskWire" />
+        </StandardDirectory>
+
+        <Feature Id="MainApplication" Title="TaskWire" Level="1">
+            <ComponentGroupRef Id="ApplicationFiles" />
+            <ComponentGroupRef Id="ApplicationShortcuts" />
+        </Feature>
+
+        <ComponentGroup Id="ApplicationFiles" Directory="INSTALLFOLDER">
+            <File Id="TaskwireEXE" Name="taskwire.exe" Source="taskwire.exe" KeyPath="yes" />
+            <Files Include="**">
+                <Exclude Files="taskwire.exe" />
+            </Files>
+        </ComponentGroup>
+
+        <ComponentGroup Id="ApplicationShortcuts" Directory="ApplicationProgramsFolder">
+            <Component Id="ApplicationShortcuts" Guid="a8fe38ab-502f-4dbc-a753-4e7e00195d71">
+                <Shortcut Id="ApplicationStartMenuShortcut" 
+                         Name="TaskWire"
+                         Target="[#TaskwireEXE]"
+                         WorkingDirectory="INSTALLFOLDER" />
+                <RemoveFolder Id="CleanUpShortCut" Directory="ApplicationProgramsFolder" On="uninstall" />
+            </Component>
+        </ComponentGroup>
+
+        <MajorUpgrade DowngradeErrorMessage="A newer version of Taskwire is already installed." />
+        <MediaTemplate EmbedCab="yes" />
+    </Package>
+</Wix> 
