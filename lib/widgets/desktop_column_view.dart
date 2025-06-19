@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import '../models/task.dart';
+import '../models/printer.dart';
 import '../services/task_manager.dart';
+import '../services/printer_service.dart';
 import 'task_tile.dart';
 
 class DesktopColumnView extends StatefulWidget {
   final TaskManager taskManager;
+  final PrinterService printerService;
   final Function(int, {String? title, bool? isCompleted}) onUpdateTask;
   final Function(int) onDeleteTask;
   final Function(Task) onStartEditing;
@@ -16,6 +19,7 @@ class DesktopColumnView extends StatefulWidget {
   const DesktopColumnView({
     super.key,
     required this.taskManager,
+    required this.printerService,
     required this.onUpdateTask,
     required this.onDeleteTask,
     required this.onStartEditing,
@@ -95,6 +99,181 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
     setState(() {
       _columnHierarchy = _columnHierarchy.sublist(0, columnIndex + 1);
     });
+  }
+
+  Future<void> _printColumn(Task? parent) async {
+    try {
+      final tasks = await widget.taskManager.getTasksAtLevel(
+        parent?.id?.toString(),
+      );
+
+      final printers = await widget.printerService.getPrinters();
+      if (printers.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No printers available. Please add a printer first.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      final connectedPrinters = printers.where((p) => p.isConnected).toList();
+      if (connectedPrinters.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'No connected printers. Please connect a printer first.',
+            ),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      String? selectedPrinterId;
+      if (connectedPrinters.length == 1) {
+        selectedPrinterId = connectedPrinters.first.id;
+      } else {
+        selectedPrinterId = await _showPrinterSelectionDialog(
+          connectedPrinters,
+        );
+        if (selectedPrinterId == null) return;
+      }
+
+      final columnTitle = parent?.title ?? 'All Tasks';
+      final success = await widget.printerService.printColumn(
+        selectedPrinterId!,
+        tasks,
+        columnTitle: columnTitle,
+      );
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Column "${columnTitle}" printed successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to print column'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error printing column: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _printColumnWithSubtasks(Task? parent) async {
+    try {
+      final tasks = await widget.taskManager.getTasksAtLevel(
+        parent?.id?.toString(),
+      );
+
+      final printers = await widget.printerService.getPrinters();
+      if (printers.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No printers available. Please add a printer first.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      final connectedPrinters = printers.where((p) => p.isConnected).toList();
+      if (connectedPrinters.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'No connected printers. Please connect a printer first.',
+            ),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      String? selectedPrinterId;
+      if (connectedPrinters.length == 1) {
+        selectedPrinterId = connectedPrinters.first.id;
+      } else {
+        selectedPrinterId = await _showPrinterSelectionDialog(
+          connectedPrinters,
+        );
+        if (selectedPrinterId == null) return;
+      }
+
+      final columnTitle = parent?.title ?? 'All Tasks';
+      final success = await widget.printerService.printColumnWithSubtasks(
+        selectedPrinterId!,
+        tasks,
+        columnTitle: columnTitle,
+      );
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Column "${columnTitle}" with subtasks printed successfully',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to print column with subtasks'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error printing column with subtasks: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<String?> _showPrinterSelectionDialog(List<Printer> printers) async {
+    return showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Printer'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: printers
+              .map(
+                (printer) => ListTile(
+                  title: Text(printer.name),
+                  subtitle: Text(
+                    '${printer.type.name.toUpperCase()}: ${printer.address}',
+                  ),
+                  onTap: () => Navigator.of(context).pop(printer.id),
+                ),
+              )
+              .toList(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _onTaskDrop(Task draggedTask, Task targetTask) {
@@ -347,11 +526,11 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                 },
             menuChildren: [
               MenuItemButton(
-                onPressed: () {},
+                onPressed: () => _printColumn(parent),
                 child: const Text('Print Column'),
               ),
               MenuItemButton(
-                onPressed: () {},
+                onPressed: () => _printColumnWithSubtasks(parent),
                 child: const Text('Print Column & Subtasks'),
               ),
             ],

@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import '../main.dart';
 import '../models/task.dart';
 import '../services/task_manager.dart';
+import '../services/printer_service.dart';
+import '../repositories/printer_repository.dart';
 import '../widgets/desktop_column_view.dart';
 import '../widgets/mobile_drill_down_view.dart';
 
@@ -15,6 +17,9 @@ class ListPage extends StatefulWidget {
 
 class _ListPageState extends State<ListPage> {
   final TaskManager _taskManager = getIt.get<TaskManager>();
+  final PrinterService _printerService = PrinterService(
+    getIt.get<PrinterRepository>(),
+  );
   int? _editingTaskId;
   final TextEditingController _editController = TextEditingController();
   final TextEditingController _newTaskController = TextEditingController();
@@ -147,6 +152,7 @@ class _ListPageState extends State<ListPage> {
   Widget _buildDesktopView() {
     return DesktopColumnView(
       taskManager: _taskManager,
+      printerService: _printerService,
       onUpdateTask: _updateTask,
       onDeleteTask: _deleteTask,
       onStartEditing: _startEditing,
