@@ -283,6 +283,15 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  flutter_usb_printer:
+    dependency: "direct main"
+    description:
+      path: "."
+      ref: master
+      resolved-ref: "7ec70491115d90e6a7dc2a0a282c974aede8c949"
+      url: "https://github.com/kechankrisna/flutter_usb_printer"
+    source: git
+    version: "0.1.0+1"
   frontend_server_client:
     dependency: transitive
     description:

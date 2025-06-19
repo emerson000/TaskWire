@@ -4,11 +4,15 @@ import 'package:taskwire/repositories/printer_repository.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:print_usb/print_usb.dart';
 import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:flutter_usb_printer/flutter_usb_printer.dart';
 
 class PrinterService {
   final PrinterRepository _repository;
+  final FlutterUsbPrinter _flutterUsbPrinter;
 
-  PrinterService(this._repository);
+  PrinterService(this._repository) : _flutterUsbPrinter = FlutterUsbPrinter();
 
   Future<List<Printer>> getPrinters() {
     return _repository.getPrinters();
@@ -23,10 +27,32 @@ class PrinterService {
   }
 
   Future<List<Printer>> scanForPrinters() async {
-    if (Platform.isWindows) {
+    if (Platform.isAndroid) {
+      return await _scanAndroidUsbPrinters();
+    } else if (Platform.isWindows) {
       return await _scanWindowsUsbPrinters();
     } else {
       return await _scanMockPrinters();
+    }
+  }
+
+  Future<List<Printer>> _scanAndroidUsbPrinters() async {
+    try {
+      final devices = await FlutterUsbPrinter.getUSBDeviceList();
+      return devices
+          .map(
+            (device) => Printer(
+              name: device['productName'] ?? 'Unknown USB Device',
+              type: PrinterType.usb,
+              address:
+                  "${device['vendorId']}:${device['productId']}", // Storing vendor and product id
+              lastSeen: DateTime.now(),
+            ),
+          )
+          .toList();
+    } catch (e) {
+      print('Error scanning USB printers on Android: $e');
+      return [];
     }
   }
 
@@ -75,19 +101,38 @@ class PrinterService {
       final printers = await _repository.getPrinters();
       final printer = printers.firstWhere((p) => p.id == printerId);
 
-      if (printer.type == PrinterType.usb && Platform.isWindows) {
-        final connected = await PrintUsb.connect(name: printer.address);
-        if (connected) {
-          printer.isConnected = true;
-          await _repository.updatePrinter(printer);
+      if (printer.type == PrinterType.usb) {
+        if (Platform.isWindows) {
+          final connected = await PrintUsb.connect(name: printer.address);
+          if (connected) {
+            printer.isConnected = true;
+            await _repository.updatePrinter(printer);
+          }
+          return connected;
+        } else if (Platform.isAndroid) {
+          final parts = printer.address.split(':');
+          if (parts.length != 2) return false;
+          final vendorId = int.tryParse(parts[0]);
+          final productId = int.tryParse(parts[1]);
+
+          if (vendorId == null || productId == null) return false;
+
+          final connected = await _flutterUsbPrinter.connect(
+            vendorId,
+            productId,
+          );
+          if (connected == true) {
+            printer.isConnected = true;
+            await _repository.updatePrinter(printer);
+          }
+          return connected ?? false;
         }
-        return connected;
-      } else {
-        await Future.delayed(const Duration(seconds: 1));
-        printer.isConnected = true;
-        await _repository.updatePrinter(printer);
-        return true;
       }
+
+      await Future.delayed(const Duration(seconds: 1));
+      printer.isConnected = true;
+      await _repository.updatePrinter(printer);
+      return true;
     } catch (e) {
       print('Error connecting to printer: $e');
       return false;
@@ -99,24 +144,34 @@ class PrinterService {
       final printers = await _repository.getPrinters();
       final printer = printers.firstWhere((p) => p.id == printerId);
 
-      if (printer.type == PrinterType.usb && Platform.isWindows) {
-        final devices = await PrintUsb.getList();
-        final device = devices.firstWhere(
-          (d) => d.name == printer.address,
-          orElse: () => throw Exception('USB printer not found'),
-        );
+      if (printer.type == PrinterType.usb) {
+        if (Platform.isWindows) {
+          final devices = await PrintUsb.getList();
+          final device = devices.firstWhere(
+            (d) => d.name == printer.address,
+            orElse: () => throw Exception('USB printer not found'),
+          );
 
-        final connected = await PrintUsb.connect(name: device.name);
-        if (!connected) {
-          throw Exception('Failed to connect to USB printer');
+          final connected = await PrintUsb.connect(name: device.name);
+          if (!connected) {
+            throw Exception('Failed to connect to USB printer');
+          }
+
+          final success = await PrintUsb.printBytes(
+            bytes: bytes,
+            device: device,
+          );
+          return success;
+        } else if (Platform.isAndroid) {
+          final data = Uint8List.fromList(bytes);
+          await _flutterUsbPrinter.write(data);
+          return true;
         }
-
-        final success = await PrintUsb.printBytes(bytes: bytes, device: device);
-        return success;
       } else {
         await Future.delayed(const Duration(seconds: 2));
         return true;
       }
+      return false;
     } catch (e) {
       print('Error printing job: $e');
       return false;
