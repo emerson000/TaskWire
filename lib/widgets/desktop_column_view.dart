@@ -113,6 +113,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
         levelTitle: columnTitle,
         includeSubtasks: false,
         context: context,
+        printType: 'checklist',
       );
 
       if (result.success) {
@@ -152,6 +153,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
         levelTitle: columnTitle,
         includeSubtasks: true,
         context: context,
+        printType: 'checklist',
       );
 
       if (result.success) {
@@ -177,6 +179,109 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
         ),
       );
     }
+  }
+
+  Future<void> _printIndividualSlips(Task? parent) async {
+    try {
+      final tasks = await widget.taskManager.getTasksAtLevel(
+        parent?.id?.toString(),
+      );
+
+      final columnIndex = _columnHierarchy.indexOf(parent);
+      final hierarchyPath = _buildHierarchyPath(columnIndex);
+      final result = await widget.printerService.printTasksWithPrinterSelection(
+        tasks: tasks,
+        levelTitle: hierarchyPath,
+        includeSubtasks: false,
+        context: context,
+        printType: 'individual_slips',
+      );
+
+      if (result.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.successMessage!),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.errorMessage!),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error printing individual slips: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _printIndividualSlipsWithSubtasks(Task? parent) async {
+    try {
+      final tasks = await widget.taskManager.getTasksAtLevel(
+        parent?.id?.toString(),
+      );
+
+      final columnIndex = _columnHierarchy.indexOf(parent);
+      final hierarchyPath = _buildHierarchyPath(columnIndex);
+      final result = await widget.printerService.printTasksWithPrinterSelection(
+        tasks: tasks,
+        levelTitle: hierarchyPath,
+        includeSubtasks: true,
+        context: context,
+        printType: 'individual_slips',
+      );
+
+      if (result.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.successMessage!),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.errorMessage!),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error printing individual slips with subtasks: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  String _buildHierarchyPath(int columnIndex) {
+    if (columnIndex < 0 || columnIndex >= _columnHierarchy.length) {
+      return 'All Tasks';
+    }
+    
+    final pathParts = <String>[];
+    
+    for (int i = 0; i <= columnIndex; i++) {
+      final task = _columnHierarchy[i];
+      if (task != null) {
+        pathParts.add(task.title);
+      }
+    }
+    
+    if (pathParts.isEmpty) {
+      return 'All Tasks';
+    }
+    
+    return pathParts.join(' > ');
   }
 
   void _onTaskDrop(Task draggedTask, Task targetTask) {
@@ -411,6 +516,8 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
           PrintMenu(
             onPrintLevel: () => _printColumn(parent),
             onPrintWithSubtasks: () => _printColumnWithSubtasks(parent),
+            onPrintIndividualSlips: () => _printIndividualSlips(parent),
+            onPrintIndividualSlipsWithSubtasks: () => _printIndividualSlipsWithSubtasks(parent),
             type: PrintMenuType.menuAnchor,
           ),
           IconButton(

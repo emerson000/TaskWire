@@ -65,6 +65,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
         levelTitle: levelTitle,
         includeSubtasks: false,
         context: context,
+        printType: 'checklist',
       );
 
       if (result.success) {
@@ -104,6 +105,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
         levelTitle: levelTitle,
         includeSubtasks: true,
         context: context,
+        printType: 'checklist',
       );
 
       if (result.success) {
@@ -129,6 +131,106 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
         ),
       );
     }
+  }
+
+  Future<void> _printIndividualSlips() async {
+    try {
+      final tasks = await widget.taskManager.getTasksAtLevel(
+        _currentParent?.id?.toString(),
+      );
+
+      final hierarchyPath = _buildHierarchyPath();
+      final result = await widget.printerService.printTasksWithPrinterSelection(
+        tasks: tasks,
+        levelTitle: hierarchyPath,
+        includeSubtasks: false,
+        context: context,
+        printType: 'individual_slips',
+      );
+
+      if (result.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.successMessage!),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.errorMessage!),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error printing individual slips: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _printIndividualSlipsWithSubtasks() async {
+    try {
+      final tasks = await widget.taskManager.getTasksAtLevel(
+        _currentParent?.id?.toString(),
+      );
+
+      final hierarchyPath = _buildHierarchyPath();
+      final result = await widget.printerService.printTasksWithPrinterSelection(
+        tasks: tasks,
+        levelTitle: hierarchyPath,
+        includeSubtasks: true,
+        context: context,
+        printType: 'individual_slips',
+      );
+
+      if (result.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.successMessage!),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.errorMessage!),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error printing individual slips with subtasks: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  String _buildHierarchyPath() {
+    if (_currentParent == null) {
+      return 'All Tasks';
+    }
+    
+    final pathParts = <String>[];
+    
+    for (final task in _breadcrumbs) {
+      if (task != null) {
+        pathParts.add(task.title);
+      }
+    }
+    
+    if (pathParts.isEmpty) {
+      return 'All Tasks';
+    }
+    
+    return pathParts.join(' > ');
   }
 
   @override
@@ -285,6 +387,8 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
                     PrintMenu(
                       onPrintLevel: _printCurrentLevel,
                       onPrintWithSubtasks: _printCurrentLevelWithSubtasks,
+                      onPrintIndividualSlips: _printIndividualSlips,
+                      onPrintIndividualSlipsWithSubtasks: _printIndividualSlipsWithSubtasks,
                       type: PrintMenuType.popup,
                     ),
                     const SizedBox(width: 8),

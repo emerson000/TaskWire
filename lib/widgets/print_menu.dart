@@ -8,6 +8,8 @@ enum PrintMenuType {
 class PrintMenu extends StatelessWidget {
   final VoidCallback onPrintLevel;
   final VoidCallback onPrintWithSubtasks;
+  final VoidCallback onPrintIndividualSlips;
+  final VoidCallback onPrintIndividualSlipsWithSubtasks;
   final PrintMenuType type;
   final String? tooltip;
 
@@ -15,6 +17,8 @@ class PrintMenu extends StatelessWidget {
     super.key,
     required this.onPrintLevel,
     required this.onPrintWithSubtasks,
+    required this.onPrintIndividualSlips,
+    required this.onPrintIndividualSlipsWithSubtasks,
     this.type = PrintMenuType.popup,
     this.tooltip,
   });
@@ -28,17 +32,33 @@ class PrintMenu extends StatelessWidget {
           tooltip: tooltip ?? 'Print options',
           onSelected: (value) {
             switch (value) {
-              case 'print_level':
+              case 'checklist_level':
                 onPrintLevel();
                 break;
-              case 'print_with_subtasks':
+              case 'checklist_with_subtasks':
                 onPrintWithSubtasks();
+                break;
+              case 'individual_slips':
+                onPrintIndividualSlips();
+                break;
+              case 'individual_slips_with_subtasks':
+                onPrintIndividualSlipsWithSubtasks();
                 break;
             }
           },
           itemBuilder: (context) => [
+            PopupMenuItem<String>(
+              enabled: false,
+              child: Text(
+                'Checklist',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            ),
             const PopupMenuItem(
-              value: 'print_level',
+              value: 'checklist_level',
               child: Row(
                 children: [
                   Icon(Icons.print, size: 16),
@@ -48,12 +68,43 @@ class PrintMenu extends StatelessWidget {
               ),
             ),
             const PopupMenuItem(
-              value: 'print_with_subtasks',
+              value: 'checklist_with_subtasks',
               child: Row(
                 children: [
                   Icon(Icons.print_outlined, size: 16),
                   SizedBox(width: 8),
                   Text('Print Level & Subtasks'),
+                ],
+              ),
+            ),
+            const PopupMenuDivider(),
+            PopupMenuItem<String>(
+              enabled: false,
+              child: Text(
+                'Individual Slips',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'individual_slips',
+              child: Row(
+                children: [
+                  Icon(Icons.receipt, size: 16),
+                  SizedBox(width: 8),
+                  Text('Print Individual Slips'),
+                ],
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'individual_slips_with_subtasks',
+              child: Row(
+                children: [
+                  Icon(Icons.receipt_long, size: 16),
+                  SizedBox(width: 8),
+                  Text('Print Individual Slips & Subtasks'),
                 ],
               ),
             ),
@@ -80,6 +131,16 @@ class PrintMenu extends StatelessWidget {
             );
           },
           menuChildren: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text(
+                'Checklist',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            ),
             MenuItemButton(
               onPressed: onPrintLevel,
               child: const Text('Print Column'),
@@ -87,6 +148,25 @@ class PrintMenu extends StatelessWidget {
             MenuItemButton(
               onPressed: onPrintWithSubtasks,
               child: const Text('Print Column & Subtasks'),
+            ),
+            const Divider(),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text(
+                'Individual Slips',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            ),
+            MenuItemButton(
+              onPressed: onPrintIndividualSlips,
+              child: const Text('Print Individual Slips'),
+            ),
+            MenuItemButton(
+              onPressed: onPrintIndividualSlipsWithSubtasks,
+              child: const Text('Print Individual Slips & Subtasks'),
             ),
           ],
         );

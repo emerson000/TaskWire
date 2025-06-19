@@ -242,6 +242,54 @@ class PrinterService {
     }
   }
 
+  Future<bool> printIndividualSlips(
+    String printerId,
+    List<Task> tasks, {
+    String? hierarchyPath,
+  }) async {
+    try {
+      final incompleteTasks = tasks.where((task) => !task.isCompleted).toList();
+      
+      if (incompleteTasks.isEmpty) {
+        return true;
+      }
+      
+      for (final task in incompleteTasks) {
+        final slipBytes = await _generateIndividualSlipBytes(task, hierarchyPath);
+        final success = await printJob(printerId, slipBytes);
+        if (!success) return false;
+      }
+      return true;
+    } catch (e) {
+      print('Error in print individual slips: $e');
+      return false;
+    }
+  }
+
+  Future<bool> printIndividualSlipsWithSubtasks(
+    String printerId,
+    List<Task> tasks, {
+    String? hierarchyPath,
+  }) async {
+    try {
+      final incompleteTasks = tasks.where((task) => !task.isCompleted).toList();
+      
+      if (incompleteTasks.isEmpty) {
+        return true;
+      }
+      
+      for (final task in incompleteTasks) {
+        final slipBytes = await _generateIndividualSlipWithSubtasksBytes(task, hierarchyPath);
+        final success = await printJob(printerId, slipBytes);
+        if (!success) return false;
+      }
+      return true;
+    } catch (e) {
+      print('Error in print individual slips with subtasks: $e');
+      return false;
+    }
+  }
+
   Future<List<int>> _generateColumnWithSubtasksReceiptBytes(
     List<Task> tasks,
     String? columnTitle,
@@ -505,6 +553,7 @@ class PrinterService {
     required String? levelTitle,
     required bool includeSubtasks,
     required BuildContext context,
+    String? printType,
   }) async {
     try {
       final printers = await getPrinters();
@@ -542,29 +591,59 @@ class PrinterService {
         }
       }
 
-      final success = includeSubtasks
-          ? await printColumnWithSubtasks(selectedPrinterId!, tasks, columnTitle: levelTitle)
-          : await printColumn(selectedPrinterId!, tasks, columnTitle: levelTitle);
+      bool success;
+      switch (printType) {
+        case 'checklist':
+          success = includeSubtasks
+              ? await printColumnWithSubtasks(selectedPrinterId!, tasks, columnTitle: levelTitle)
+              : await printColumn(selectedPrinterId!, tasks, columnTitle: levelTitle);
+          break;
+        case 'individual_slips':
+          success = includeSubtasks
+              ? await printIndividualSlipsWithSubtasks(selectedPrinterId!, tasks, hierarchyPath: levelTitle)
+              : await printIndividualSlips(selectedPrinterId!, tasks, hierarchyPath: levelTitle);
+          break;
+        default:
+          success = includeSubtasks
+              ? await printColumnWithSubtasks(selectedPrinterId!, tasks, columnTitle: levelTitle)
+              : await printColumn(selectedPrinterId!, tasks, columnTitle: levelTitle);
+      }
 
       if (success) {
         final actionText = includeSubtasks ? 'with subtasks' : '';
+        final typeText = printType == 'individual_slips' ? 'individual slips' : 'checklist';
+        
+        String successMessage;
+        if (printType == 'individual_slips') {
+          final incompleteCount = tasks.where((task) => !task.isCompleted).length;
+          if (incompleteCount == 0) {
+            successMessage = 'No incomplete tasks to print for level "$levelTitle"';
+          } else {
+            successMessage = '$incompleteCount incomplete task${incompleteCount == 1 ? '' : 's'} from level "$levelTitle" printed as $typeText successfully';
+          }
+        } else {
+          successMessage = 'Level "$levelTitle" $actionText printed as $typeText successfully';
+        }
+        
         return PrintResult(
           success: true,
-          successMessage: 'Level "$levelTitle" $actionText printed successfully',
+          successMessage: successMessage,
         );
       } else {
         final actionText = includeSubtasks ? 'with subtasks' : '';
+        final typeText = printType == 'individual_slips' ? 'individual slips' : 'checklist';
         return PrintResult(
           success: false,
-          errorMessage: 'Failed to print level $actionText',
+          errorMessage: 'Failed to print level $actionText as $typeText',
           errorType: PrintErrorType.printFailed,
         );
       }
     } catch (e) {
       final actionText = includeSubtasks ? 'with subtasks' : '';
+      final typeText = printType == 'individual_slips' ? 'individual slips' : 'checklist';
       return PrintResult(
         success: false,
-        errorMessage: 'Error printing level $actionText: $e',
+        errorMessage: 'Error printing level $actionText as $typeText: $e',
         errorType: PrintErrorType.exception,
       );
     }
@@ -600,5 +679,155 @@ class PrinterService {
         ],
       ),
     );
+  }
+
+  Future<List<int>> _generateIndividualSlipBytes(
+    Task task,
+    String? hierarchyPath,
+  ) async {
+    final profile = await CapabilityProfile.load();
+    final generator = Generator(PaperSize.mm80, profile);
+    generator.setGlobalFont(PosFontType.fontA);
+
+    List<int> bytes = [];
+    bytes += generator.reset();
+
+    if (hierarchyPath != null) {
+      bytes += generator.text(
+        hierarchyPath,
+        styles: PosStyles(
+          height: PosTextSize.size1,
+          width: PosTextSize.size1,
+          align: PosAlign.center,
+          bold: true,
+        ),
+      );
+      bytes += generator.text('');
+    }
+
+    bytes += generator.text(
+      task.title,
+      styles: PosStyles(
+        height: PosTextSize.size3,
+        width: PosTextSize.size3,
+        align: PosAlign.center,
+        bold: true,
+      ),
+    );
+
+    bytes += generator.text('');
+
+    bytes += generator.text(
+      'Date: ${DateTime.now().toString().split('.')[0]}',
+      styles: PosStyles(
+        height: PosTextSize.size1,
+        width: PosTextSize.size1,
+        align: PosAlign.center,
+      ),
+    );
+
+    if (task.subtaskCount > 0) {
+      bytes += generator.text(
+        'Subtasks: ${task.subtaskCount}',
+        styles: PosStyles(
+          height: PosTextSize.size1,
+          width: PosTextSize.size1,
+          align: PosAlign.center,
+        ),
+      );
+    }
+    bytes += generator.cut();
+
+    return bytes;
+  }
+
+  Future<List<int>> _generateIndividualSlipWithSubtasksBytes(
+    Task task,
+    String? hierarchyPath,
+  ) async {
+    final profile = await CapabilityProfile.load();
+    final generator = Generator(PaperSize.mm80, profile);
+    generator.setGlobalFont(PosFontType.fontA);
+
+    List<int> bytes = [];
+    bytes += generator.reset();
+
+    if (hierarchyPath != null) {
+      bytes += generator.text(
+        hierarchyPath,
+        styles: PosStyles(
+          height: PosTextSize.size1,
+          width: PosTextSize.size1,
+          align: PosAlign.center,
+          bold: true,
+        ),
+      );
+      bytes += generator.text('');
+    }
+
+    bytes += generator.text(
+      task.title,
+      styles: PosStyles(
+        height: PosTextSize.size3,
+        width: PosTextSize.size3,
+        align: PosAlign.center,
+        bold: true,
+      ),
+    );
+
+    bytes += generator.text('');
+
+    bytes += generator.text(
+      'Date: ${DateTime.now().toString().split('.')[0]}',
+      styles: PosStyles(
+        height: PosTextSize.size1,
+        width: PosTextSize.size1,
+        align: PosAlign.center,
+      ),
+    );
+
+    if (task.subtaskCount > 0) {
+      bytes += generator.text('');
+      bytes += generator.text(
+        'Subtasks:',
+        styles: PosStyles(
+          height: PosTextSize.size1,
+          width: PosTextSize.size1,
+          align: PosAlign.center,
+          bold: true,
+        ),
+      );
+      bytes += await _addSubtasksToIndividualSlip(generator, task.subtasks, 1);
+    }
+    bytes += generator.cut();
+
+    return bytes;
+  }
+
+  Future<List<int>> _addSubtasksToIndividualSlip(
+    Generator generator,
+    List<Task> subtasks,
+    int level,
+  ) async {
+    List<int> bytes = [];
+    for (final subtask in subtasks) {
+      final indent = '  ' * level;
+      bytes += generator.text(
+        '$indent[ ] ${subtask.title}',
+        styles: PosStyles(
+          height: PosTextSize.size1,
+          width: PosTextSize.size1,
+        ),
+      );
+
+      if (subtask.subtaskCount > 0) {
+        bytes += await _addSubtasksToIndividualSlip(
+          generator,
+          subtask.subtasks,
+          level + 1,
+        );
+      }
+    }
+    return bytes;
   }
 }
