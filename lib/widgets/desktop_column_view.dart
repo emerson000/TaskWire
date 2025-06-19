@@ -3,6 +3,7 @@ import '../models/task.dart';
 import '../services/task_manager.dart';
 import '../services/printer_service.dart';
 import 'task_tile.dart';
+import 'print_menu.dart';
 
 class DesktopColumnView extends StatefulWidget {
   final TaskManager taskManager;
@@ -407,35 +408,10 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
               ],
             ),
           ),
-          MenuAnchor(
-            builder:
-                (
-                  BuildContext context,
-                  MenuController controller,
-                  Widget? child,
-                ) {
-                  return IconButton(
-                    icon: const Icon(Icons.print),
-                    onPressed: () {
-                      if (controller.isOpen) {
-                        controller.close();
-                      } else {
-                        controller.open();
-                      }
-                    },
-                    tooltip: 'Print options',
-                  );
-                },
-            menuChildren: [
-              MenuItemButton(
-                onPressed: () => _printColumn(parent),
-                child: const Text('Print Column'),
-              ),
-              MenuItemButton(
-                onPressed: () => _printColumnWithSubtasks(parent),
-                child: const Text('Print Column & Subtasks'),
-              ),
-            ],
+          PrintMenu(
+            onPrintLevel: () => _printColumn(parent),
+            onPrintWithSubtasks: () => _printColumnWithSubtasks(parent),
+            type: PrintMenuType.menuAnchor,
           ),
           IconButton(
             icon: const Icon(Icons.add),

@@ -5,6 +5,7 @@ import '../services/task_manager.dart';
 import '../services/printer_service.dart';
 import 'task_tile.dart';
 import 'breadcrumb_navigation.dart';
+import 'print_menu.dart';
 
 class MobileDrillDownView extends StatefulWidget {
   final TaskManager taskManager;
@@ -281,41 +282,10 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
                         style: Theme.of(context).textTheme.titleSmall,
                       ),
                     ),
-                    PopupMenuButton<String>(
-                      icon: const Icon(Icons.print, size: 20),
-                      tooltip: 'Print options',
-                      onSelected: (value) {
-                        switch (value) {
-                          case 'print_level':
-                            _printCurrentLevel();
-                            break;
-                          case 'print_with_subtasks':
-                            _printCurrentLevelWithSubtasks();
-                            break;
-                        }
-                      },
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(
-                          value: 'print_level',
-                          child: Row(
-                            children: [
-                              Icon(Icons.print, size: 16),
-                              SizedBox(width: 8),
-                              Text('Print Level'),
-                            ],
-                          ),
-                        ),
-                        const PopupMenuItem(
-                          value: 'print_with_subtasks',
-                          child: Row(
-                            children: [
-                              Icon(Icons.print_outlined, size: 16),
-                              SizedBox(width: 8),
-                              Text('Print Level & Subtasks'),
-                            ],
-                          ),
-                        ),
-                      ],
+                    PrintMenu(
+                      onPrintLevel: _printCurrentLevel,
+                      onPrintWithSubtasks: _printCurrentLevelWithSubtasks,
+                      type: PrintMenuType.popup,
                     ),
                     const SizedBox(width: 8),
                     TextButton.icon(
