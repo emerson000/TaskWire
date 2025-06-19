@@ -33,7 +33,7 @@ class TaskTile extends StatelessWidget {
       return _buildEditingTile(context);
     }
 
-    return Draggable<Task>(
+    return LongPressDraggable<Task>(
       data: task,
       feedback: Material(
         elevation: 4.0,
