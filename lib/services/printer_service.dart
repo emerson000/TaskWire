@@ -144,6 +144,11 @@ class PrinterService {
       final printers = await _repository.getPrinters();
       final printer = printers.firstWhere((p) => p.id == printerId);
 
+      final connected = await connectToPrinter(printerId);
+      if (!connected) {
+        throw Exception('Failed to connect to printer');
+      }
+
       if (printer.type == PrinterType.usb) {
         if (Platform.isWindows) {
           final devices = await PrintUsb.getList();
@@ -151,11 +156,6 @@ class PrinterService {
             (d) => d.name == printer.address,
             orElse: () => throw Exception('USB printer not found'),
           );
-
-          final connected = await PrintUsb.connect(name: device.name);
-          if (!connected) {
-            throw Exception('Failed to connect to USB printer');
-          }
 
           final success = await PrintUsb.printBytes(
             bytes: bytes,
