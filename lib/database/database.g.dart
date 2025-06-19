@@ -450,6 +450,21 @@ class $PrintersTable extends Printers
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _isConnectedMeta = const VerificationMeta(
+    'isConnected',
+  );
+  @override
+  late final GeneratedColumn<bool> isConnected = GeneratedColumn<bool>(
+    'is_connected',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_connected" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _lastSeenMeta = const VerificationMeta(
     'lastSeen',
   );
@@ -462,7 +477,14 @@ class $PrintersTable extends Printers
     requiredDuringInsert: false,
   );
   @override
-  List<GeneratedColumn> get $columns => [id, name, type, address, lastSeen];
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    type,
+    address,
+    isConnected,
+    lastSeen,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -495,6 +517,15 @@ class $PrintersTable extends Printers
       );
     } else if (isInserting) {
       context.missing(_addressMeta);
+    }
+    if (data.containsKey('is_connected')) {
+      context.handle(
+        _isConnectedMeta,
+        isConnected.isAcceptableOrUnknown(
+          data['is_connected']!,
+          _isConnectedMeta,
+        ),
+      );
     }
     if (data.containsKey('last_seen')) {
       context.handle(
@@ -529,6 +560,10 @@ class $PrintersTable extends Printers
         DriftSqlType.string,
         data['${effectivePrefix}address'],
       )!,
+      isConnected: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_connected'],
+      )!,
       lastSeen: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}last_seen'],
@@ -550,12 +585,14 @@ class PrinterEntry extends DataClass implements Insertable<PrinterEntry> {
   final String name;
   final PrinterType type;
   final String address;
+  final bool isConnected;
   final DateTime? lastSeen;
   const PrinterEntry({
     required this.id,
     required this.name,
     required this.type,
     required this.address,
+    required this.isConnected,
     this.lastSeen,
   });
   @override
@@ -567,6 +604,7 @@ class PrinterEntry extends DataClass implements Insertable<PrinterEntry> {
       map['type'] = Variable<int>($PrintersTable.$convertertype.toSql(type));
     }
     map['address'] = Variable<String>(address);
+    map['is_connected'] = Variable<bool>(isConnected);
     if (!nullToAbsent || lastSeen != null) {
       map['last_seen'] = Variable<DateTime>(lastSeen);
     }
@@ -579,6 +617,7 @@ class PrinterEntry extends DataClass implements Insertable<PrinterEntry> {
       name: Value(name),
       type: Value(type),
       address: Value(address),
+      isConnected: Value(isConnected),
       lastSeen: lastSeen == null && nullToAbsent
           ? const Value.absent()
           : Value(lastSeen),
@@ -595,6 +634,7 @@ class PrinterEntry extends DataClass implements Insertable<PrinterEntry> {
       name: serializer.fromJson<String>(json['name']),
       type: serializer.fromJson<PrinterType>(json['type']),
       address: serializer.fromJson<String>(json['address']),
+      isConnected: serializer.fromJson<bool>(json['isConnected']),
       lastSeen: serializer.fromJson<DateTime?>(json['lastSeen']),
     );
   }
@@ -606,6 +646,7 @@ class PrinterEntry extends DataClass implements Insertable<PrinterEntry> {
       'name': serializer.toJson<String>(name),
       'type': serializer.toJson<PrinterType>(type),
       'address': serializer.toJson<String>(address),
+      'isConnected': serializer.toJson<bool>(isConnected),
       'lastSeen': serializer.toJson<DateTime?>(lastSeen),
     };
   }
@@ -615,12 +656,14 @@ class PrinterEntry extends DataClass implements Insertable<PrinterEntry> {
     String? name,
     PrinterType? type,
     String? address,
+    bool? isConnected,
     Value<DateTime?> lastSeen = const Value.absent(),
   }) => PrinterEntry(
     id: id ?? this.id,
     name: name ?? this.name,
     type: type ?? this.type,
     address: address ?? this.address,
+    isConnected: isConnected ?? this.isConnected,
     lastSeen: lastSeen.present ? lastSeen.value : this.lastSeen,
   );
   PrinterEntry copyWithCompanion(PrintersCompanion data) {
@@ -629,6 +672,9 @@ class PrinterEntry extends DataClass implements Insertable<PrinterEntry> {
       name: data.name.present ? data.name.value : this.name,
       type: data.type.present ? data.type.value : this.type,
       address: data.address.present ? data.address.value : this.address,
+      isConnected: data.isConnected.present
+          ? data.isConnected.value
+          : this.isConnected,
       lastSeen: data.lastSeen.present ? data.lastSeen.value : this.lastSeen,
     );
   }
@@ -640,13 +686,15 @@ class PrinterEntry extends DataClass implements Insertable<PrinterEntry> {
           ..write('name: $name, ')
           ..write('type: $type, ')
           ..write('address: $address, ')
+          ..write('isConnected: $isConnected, ')
           ..write('lastSeen: $lastSeen')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, type, address, lastSeen);
+  int get hashCode =>
+      Object.hash(id, name, type, address, isConnected, lastSeen);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -655,6 +703,7 @@ class PrinterEntry extends DataClass implements Insertable<PrinterEntry> {
           other.name == this.name &&
           other.type == this.type &&
           other.address == this.address &&
+          other.isConnected == this.isConnected &&
           other.lastSeen == this.lastSeen);
 }
 
@@ -663,6 +712,7 @@ class PrintersCompanion extends UpdateCompanion<PrinterEntry> {
   final Value<String> name;
   final Value<PrinterType> type;
   final Value<String> address;
+  final Value<bool> isConnected;
   final Value<DateTime?> lastSeen;
   final Value<int> rowid;
   const PrintersCompanion({
@@ -670,6 +720,7 @@ class PrintersCompanion extends UpdateCompanion<PrinterEntry> {
     this.name = const Value.absent(),
     this.type = const Value.absent(),
     this.address = const Value.absent(),
+    this.isConnected = const Value.absent(),
     this.lastSeen = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -678,6 +729,7 @@ class PrintersCompanion extends UpdateCompanion<PrinterEntry> {
     required String name,
     required PrinterType type,
     required String address,
+    this.isConnected = const Value.absent(),
     this.lastSeen = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -689,6 +741,7 @@ class PrintersCompanion extends UpdateCompanion<PrinterEntry> {
     Expression<String>? name,
     Expression<int>? type,
     Expression<String>? address,
+    Expression<bool>? isConnected,
     Expression<DateTime>? lastSeen,
     Expression<int>? rowid,
   }) {
@@ -697,6 +750,7 @@ class PrintersCompanion extends UpdateCompanion<PrinterEntry> {
       if (name != null) 'name': name,
       if (type != null) 'type': type,
       if (address != null) 'address': address,
+      if (isConnected != null) 'is_connected': isConnected,
       if (lastSeen != null) 'last_seen': lastSeen,
       if (rowid != null) 'rowid': rowid,
     });
@@ -707,6 +761,7 @@ class PrintersCompanion extends UpdateCompanion<PrinterEntry> {
     Value<String>? name,
     Value<PrinterType>? type,
     Value<String>? address,
+    Value<bool>? isConnected,
     Value<DateTime?>? lastSeen,
     Value<int>? rowid,
   }) {
@@ -715,6 +770,7 @@ class PrintersCompanion extends UpdateCompanion<PrinterEntry> {
       name: name ?? this.name,
       type: type ?? this.type,
       address: address ?? this.address,
+      isConnected: isConnected ?? this.isConnected,
       lastSeen: lastSeen ?? this.lastSeen,
       rowid: rowid ?? this.rowid,
     );
@@ -737,6 +793,9 @@ class PrintersCompanion extends UpdateCompanion<PrinterEntry> {
     if (address.present) {
       map['address'] = Variable<String>(address.value);
     }
+    if (isConnected.present) {
+      map['is_connected'] = Variable<bool>(isConnected.value);
+    }
     if (lastSeen.present) {
       map['last_seen'] = Variable<DateTime>(lastSeen.value);
     }
@@ -753,6 +812,7 @@ class PrintersCompanion extends UpdateCompanion<PrinterEntry> {
           ..write('name: $name, ')
           ..write('type: $type, ')
           ..write('address: $address, ')
+          ..write('isConnected: $isConnected, ')
           ..write('lastSeen: $lastSeen, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -1108,6 +1168,7 @@ typedef $$PrintersTableCreateCompanionBuilder =
       required String name,
       required PrinterType type,
       required String address,
+      Value<bool> isConnected,
       Value<DateTime?> lastSeen,
       Value<int> rowid,
     });
@@ -1117,6 +1178,7 @@ typedef $$PrintersTableUpdateCompanionBuilder =
       Value<String> name,
       Value<PrinterType> type,
       Value<String> address,
+      Value<bool> isConnected,
       Value<DateTime?> lastSeen,
       Value<int> rowid,
     });
@@ -1148,6 +1210,11 @@ class $$PrintersTableFilterComposer
 
   ColumnFilters<String> get address => $composableBuilder(
     column: $table.address,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isConnected => $composableBuilder(
+    column: $table.isConnected,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1186,6 +1253,11 @@ class $$PrintersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isConnected => $composableBuilder(
+    column: $table.isConnected,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get lastSeen => $composableBuilder(
     column: $table.lastSeen,
     builder: (column) => ColumnOrderings(column),
@@ -1212,6 +1284,11 @@ class $$PrintersTableAnnotationComposer
 
   GeneratedColumn<String> get address =>
       $composableBuilder(column: $table.address, builder: (column) => column);
+
+  GeneratedColumn<bool> get isConnected => $composableBuilder(
+    column: $table.isConnected,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get lastSeen =>
       $composableBuilder(column: $table.lastSeen, builder: (column) => column);
@@ -1252,6 +1329,7 @@ class $$PrintersTableTableManager
                 Value<String> name = const Value.absent(),
                 Value<PrinterType> type = const Value.absent(),
                 Value<String> address = const Value.absent(),
+                Value<bool> isConnected = const Value.absent(),
                 Value<DateTime?> lastSeen = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PrintersCompanion(
@@ -1259,6 +1337,7 @@ class $$PrintersTableTableManager
                 name: name,
                 type: type,
                 address: address,
+                isConnected: isConnected,
                 lastSeen: lastSeen,
                 rowid: rowid,
               ),
@@ -1268,6 +1347,7 @@ class $$PrintersTableTableManager
                 required String name,
                 required PrinterType type,
                 required String address,
+                Value<bool> isConnected = const Value.absent(),
                 Value<DateTime?> lastSeen = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PrintersCompanion.insert(
@@ -1275,6 +1355,7 @@ class $$PrintersTableTableManager
                 name: name,
                 type: type,
                 address: address,
+                isConnected: isConnected,
                 lastSeen: lastSeen,
                 rowid: rowid,
               ),

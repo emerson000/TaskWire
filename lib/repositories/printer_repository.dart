@@ -16,6 +16,7 @@ class PrinterRepository {
             name: entry.name,
             type: entry.type,
             address: entry.address,
+            isConnected: entry.isConnected,
             lastSeen: entry.lastSeen,
           ),
         )
@@ -28,6 +29,7 @@ class PrinterRepository {
       name: Value(printer.name),
       type: Value(printer.type),
       address: Value(printer.address),
+      isConnected: Value(printer.isConnected),
       lastSeen: Value(printer.lastSeen),
     );
     return _db.addPrinter(entry);
@@ -43,6 +45,7 @@ class PrinterRepository {
       name: printer.name,
       type: printer.type,
       address: printer.address,
+      isConnected: printer.isConnected,
       lastSeen: printer.lastSeen,
     );
     return _db.updatePrinter(entry);

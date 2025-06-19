@@ -22,6 +22,7 @@ class Printers extends Table {
   TextColumn get name => text()();
   IntColumn get type => integer().map(const PrinterTypeConverter())();
   TextColumn get address => text()();
+  BoolColumn get isConnected => boolean().withDefault(const Constant(false))();
   DateTimeColumn get lastSeen => dateTime().nullable()();
 
   @override
@@ -46,7 +47,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -60,18 +61,24 @@ class AppDatabase extends _$AppDatabase {
         print('Creating printers table...');
         await m.createTable(printers);
       }
+      if (from < 3) {
+        print('Adding isConnected field to printers table...');
+        await customStatement(
+          'ALTER TABLE printers ADD COLUMN is_connected BOOLEAN NOT NULL DEFAULT 0',
+        );
+      }
     },
     beforeOpen: (details) async {
       print(
         'Database opened. Schema version: ${details.versionBefore} -> ${details.versionNow}',
       );
-      // Ensure printers table exists
       await customStatement('''
         CREATE TABLE IF NOT EXISTS printers (
           id TEXT NOT NULL PRIMARY KEY,
           name TEXT NOT NULL,
           type INTEGER NOT NULL,
           address TEXT NOT NULL,
+          is_connected BOOLEAN NOT NULL DEFAULT 0,
           last_seen DATETIME
         )
       ''');

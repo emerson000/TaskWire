@@ -59,6 +59,23 @@ class PrinterProvider extends ChangeNotifier {
     );
     await addPrinter(printer);
   }
+
+  Future<bool> connectToPrinter(String printerId) async {
+    final success = await _printerService.connectToPrinter(printerId);
+    if (success) {
+      await _loadPrinters();
+    }
+    return success;
+  }
+
+  Future<void> disconnectPrinter(String printerId) async {
+    await _printerService.disconnectPrinter(printerId);
+    await _loadPrinters();
+  }
+
+  Future<bool> testPrint(String printerId) async {
+    return await _printerService.testPrint(printerId);
+  }
 }
 
 class PrinterSettingsPage extends StatelessWidget {
@@ -138,35 +155,71 @@ class PrinterSettingsPage extends StatelessWidget {
     return Card(
       child: ListTile(
         title: Text(printer.name),
-        subtitle: Text(
-          '${printer.type.name.toUpperCase()}: ${printer.address}',
-        ),
-        trailing: IconButton(
-          icon: const Icon(Icons.delete_outline, color: Colors.red),
-          onPressed: () async {
-            final confirm = await showDialog<bool>(
-              context: context,
-              builder: (ctx) => AlertDialog(
-                title: const Text('Remove Printer'),
-                content: Text(
-                  'Are you sure you want to remove ${printer.name}?',
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(ctx).pop(false),
-                    child: const Text('Cancel'),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.of(ctx).pop(true),
-                    child: const Text('Remove'),
-                  ),
-                ],
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('${printer.type.name.toUpperCase()}: ${printer.address}'),
+            if (printer.lastSeen != null)
+              Text(
+                'Last seen: ${printer.lastSeen!.toString().substring(0, 19)}',
+                style: Theme.of(context).textTheme.bodySmall,
               ),
-            );
-            if (confirm == true) {
-              provider.removePrinter(printer.id);
-            }
-          },
+          ],
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (printer.type == PrinterType.usb) ...[
+              IconButton(
+                icon: Icon(
+                  printer.isConnected ? Icons.link : Icons.link_off,
+                  color: printer.isConnected ? Colors.green : Colors.grey,
+                ),
+                onPressed: () async {
+                  if (printer.isConnected) {
+                    await provider.disconnectPrinter(printer.id);
+                  } else {
+                    await provider.connectToPrinter(printer.id);
+                  }
+                },
+                tooltip: printer.isConnected ? 'Disconnect' : 'Connect',
+              ),
+              IconButton(
+                icon: const Icon(Icons.print, color: Colors.blue),
+                onPressed: printer.isConnected
+                    ? () => provider.testPrint(printer.id)
+                    : null,
+                tooltip: 'Test Print',
+              ),
+            ],
+            IconButton(
+              icon: const Icon(Icons.delete_outline, color: Colors.red),
+              onPressed: () async {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Remove Printer'),
+                    content: Text(
+                      'Are you sure you want to remove ${printer.name}?',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(false),
+                        child: const Text('Cancel'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(true),
+                        child: const Text('Remove'),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirm == true) {
+                  provider.removePrinter(printer.id);
+                }
+              },
+            ),
+          ],
         ),
       ),
     );
@@ -177,8 +230,16 @@ class PrinterSettingsPage extends StatelessWidget {
     return Card(
       child: ListTile(
         title: Text(printer.name),
-        subtitle: Text(
-          '${printer.type.name.toUpperCase()}: ${printer.address}',
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('${printer.type.name.toUpperCase()}: ${printer.address}'),
+            if (printer.lastSeen != null)
+              Text(
+                'Discovered: ${printer.lastSeen!.toString().substring(0, 19)}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+          ],
         ),
         trailing: ElevatedButton(
           child: const Text('Add'),

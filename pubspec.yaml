@@ -38,13 +38,12 @@ dependencies:
   sqlite3_flutter_libs: ^0.5.0
   path_provider: ^2.1.5
   path: ^1.9.0
-  flutter_pos_printer_platform:
-    git:
-      url: https://github.com/quqo-dev/flutter-pos-printer.git
   provider: ^6.1.2
   get_it: ^7.6.7
   intl: ^0.19.0
   uuid: ^4.4.0
+  esc_pos_utils_plus: ^2.0.4
+  print_usb: ^0.0.3
 
 dev_dependencies:
   flutter_test:
