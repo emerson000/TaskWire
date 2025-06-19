@@ -47,7 +47,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -57,15 +57,9 @@ class AppDatabase extends _$AppDatabase {
     },
     onUpgrade: (Migrator m, int from, int to) async {
       print('Migrating database from version $from to $to');
-      if (from < 2) {
+      if (from < 4) {
         print('Creating printers table...');
         await m.createTable(printers);
-      }
-      if (from < 3) {
-        print('Adding isConnected field to printers table...');
-        await customStatement(
-          'ALTER TABLE printers ADD COLUMN is_connected BOOLEAN NOT NULL DEFAULT 0',
-        );
       }
     },
     beforeOpen: (details) async {
