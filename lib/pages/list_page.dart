@@ -166,6 +166,7 @@ class _ListPageState extends State<ListPage> {
   Widget _buildMobileView() {
     return MobileDrillDownView(
       taskManager: _taskManager,
+      printerService: _printerService,
       onUpdateTask: _updateTask,
       onDeleteTask: _deleteTask,
       onStartEditing: _startEditing,

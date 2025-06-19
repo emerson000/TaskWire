@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../models/task.dart';
+import '../models/printer.dart';
 import '../services/task_manager.dart';
+import '../services/printer_service.dart';
 import 'task_tile.dart';
 import 'breadcrumb_navigation.dart';
 
 class MobileDrillDownView extends StatefulWidget {
   final TaskManager taskManager;
+  final PrinterService printerService;
   final Function(int, {String? title, bool? isCompleted}) onUpdateTask;
   final Function(int) onDeleteTask;
   final Function(Task) onStartEditing;
@@ -20,6 +23,7 @@ class MobileDrillDownView extends StatefulWidget {
   const MobileDrillDownView({
     super.key,
     required this.taskManager,
+    required this.printerService,
     required this.onUpdateTask,
     required this.onDeleteTask,
     required this.onStartEditing,
@@ -49,7 +53,180 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
     _currentTasksFuture = _getCurrentTasks();
   }
 
+  Future<void> _printCurrentLevel() async {
+    try {
+      final tasks = await widget.taskManager.getTasksAtLevel(
+        _currentParent?.id?.toString(),
+      );
 
+      final printers = await widget.printerService.getPrinters();
+      if (printers.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No printers available. Please add a printer first.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      final connectedPrinters = printers.where((p) => p.isConnected).toList();
+      if (connectedPrinters.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'No connected printers. Please connect a printer first.',
+            ),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      String? selectedPrinterId;
+      if (connectedPrinters.length == 1) {
+        selectedPrinterId = connectedPrinters.first.id;
+      } else {
+        selectedPrinterId = await _showPrinterSelectionDialog(
+          connectedPrinters,
+        );
+        if (selectedPrinterId == null) return;
+      }
+
+      final levelTitle = _currentParent?.title ?? 'All Tasks';
+      final success = await widget.printerService.printColumn(
+        selectedPrinterId!,
+        tasks,
+        columnTitle: levelTitle,
+      );
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Level "${levelTitle}" printed successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to print level'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error printing level: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _printCurrentLevelWithSubtasks() async {
+    try {
+      final tasks = await widget.taskManager.getTasksAtLevel(
+        _currentParent?.id?.toString(),
+      );
+
+      final printers = await widget.printerService.getPrinters();
+      if (printers.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No printers available. Please add a printer first.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      final connectedPrinters = printers.where((p) => p.isConnected).toList();
+      if (connectedPrinters.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'No connected printers. Please connect a printer first.',
+            ),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      String? selectedPrinterId;
+      if (connectedPrinters.length == 1) {
+        selectedPrinterId = connectedPrinters.first.id;
+      } else {
+        selectedPrinterId = await _showPrinterSelectionDialog(
+          connectedPrinters,
+        );
+        if (selectedPrinterId == null) return;
+      }
+
+      final levelTitle = _currentParent?.title ?? 'All Tasks';
+      final success = await widget.printerService.printColumnWithSubtasks(
+        selectedPrinterId!,
+        tasks,
+        columnTitle: levelTitle,
+      );
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Level "${levelTitle}" with subtasks printed successfully',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to print level with subtasks'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error printing level with subtasks: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<String?> _showPrinterSelectionDialog(List<Printer> printers) async {
+    return showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Printer'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: printers
+              .map(
+                (printer) => ListTile(
+                  title: Text(printer.name),
+                  subtitle: Text(
+                    '${printer.type.name.toUpperCase()}: ${printer.address}',
+                  ),
+                  onTap: () => Navigator.of(context).pop(printer.id),
+                ),
+              )
+              .toList(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -94,7 +271,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
 
     try {
       await widget.taskManager.moveTaskToParent(draggedTask.id, targetTask.id);
-      
+
       if (mounted) {
         setState(() {
           _refreshTasks();
@@ -125,8 +302,11 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
 
   void _onBreadcrumbDrop(Task draggedTask, Task? targetParent) async {
     try {
-      await widget.taskManager.moveTaskToParent(draggedTask.id, targetParent?.id);
-      
+      await widget.taskManager.moveTaskToParent(
+        draggedTask.id,
+        targetParent?.id,
+      );
+
       if (mounted) {
         setState(() {
           _refreshTasks();
@@ -184,29 +364,69 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
                 onTaskDrop: _onBreadcrumbDrop,
                 isDragging: _isDragging,
               ),
-              if (_currentParent != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16.0,
-                    vertical: 8.0,
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Subtasks of "${_currentParent!.title}"',
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
-                      ),
-                      TextButton.icon(
-                        onPressed: () =>
-                            widget.onAddTask(_currentParent!.id.toString()),
-                        icon: const Icon(Icons.add, size: 16),
-                        label: const Text('Add Subtask'),
-                      ),
-                    ],
-                  ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 8.0,
                 ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _currentParent != null
+                            ? 'Subtasks of "${_currentParent!.title}"'
+                            : 'All Tasks',
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                    ),
+                    PopupMenuButton<String>(
+                      icon: const Icon(Icons.print, size: 20),
+                      tooltip: 'Print options',
+                      onSelected: (value) {
+                        switch (value) {
+                          case 'print_level':
+                            _printCurrentLevel();
+                            break;
+                          case 'print_with_subtasks':
+                            _printCurrentLevelWithSubtasks();
+                            break;
+                        }
+                      },
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: 'print_level',
+                          child: Row(
+                            children: [
+                              Icon(Icons.print, size: 16),
+                              SizedBox(width: 8),
+                              Text('Print Level'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'print_with_subtasks',
+                          child: Row(
+                            children: [
+                              Icon(Icons.print_outlined, size: 16),
+                              SizedBox(width: 8),
+                              Text('Print Level & Subtasks'),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton.icon(
+                      onPressed: () =>
+                          widget.onAddTask(_currentParent?.id?.toString()),
+                      icon: const Icon(Icons.add, size: 16),
+                      label: Text(
+                        _currentParent != null ? 'Add Subtask' : 'Add Task',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               Expanded(
                 child: Container(
                   decoration: BoxDecoration(
