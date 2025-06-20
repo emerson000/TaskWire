@@ -3,6 +3,7 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import 'package:taskwire/models/printer.dart';
 
 part 'database.g.dart';
 
@@ -15,23 +16,66 @@ class Tasks extends Table {
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }
 
-@DriftDatabase(tables: [Tasks])
+@DataClassName('PrinterEntry')
+class Printers extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  IntColumn get type => integer().map(const PrinterTypeConverter())();
+  TextColumn get address => text()();
+  BoolColumn get isConnected => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get lastSeen => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+class PrinterTypeConverter extends TypeConverter<PrinterType, int> {
+  const PrinterTypeConverter();
+  @override
+  PrinterType fromSql(int fromDb) {
+    return PrinterType.values[fromDb];
+  }
+
+  @override
+  int toSql(PrinterType value) {
+    return value.index;
+  }
+}
+
+@DriftDatabase(tables: [Tasks, Printers])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (Migrator m) async {
+      print('Creating database with all tables...');
       await m.createAll();
     },
     onUpgrade: (Migrator m, int from, int to) async {
-      if (from < 2) {
-        await m.drop(tasks);
-        await m.createAll();
+      print('Migrating database from version $from to $to');
+      if (from < 4) {
+        print('Creating printers table...');
+        await m.createTable(printers);
       }
+    },
+    beforeOpen: (details) async {
+      print(
+        'Database opened. Schema version: ${details.versionBefore} -> ${details.versionNow}',
+      );
+      await customStatement('''
+        CREATE TABLE IF NOT EXISTS printers (
+          id TEXT NOT NULL PRIMARY KEY,
+          name TEXT NOT NULL,
+          type INTEGER NOT NULL,
+          address TEXT NOT NULL,
+          is_connected BOOLEAN NOT NULL DEFAULT 0,
+          last_seen DATETIME
+        )
+      ''');
     },
   );
 
@@ -102,6 +146,19 @@ class AppDatabase extends _$AppDatabase {
     deletedCount += await deleteTask(taskId);
     return deletedCount;
   }
+
+  Future<List<PrinterEntry>> get allPrinters => select(printers).get();
+
+  Future<String> addPrinter(PrintersCompanion printer) {
+    into(printers).insert(printer, mode: InsertMode.insertOrReplace);
+    return Future.value(printer.id.value);
+  }
+
+  Future<void> deletePrinter(String id) =>
+      (delete(printers)..where((p) => p.id.equals(id))).go();
+
+  Future<void> updatePrinter(PrinterEntry printer) =>
+      update(printers).replace(printer);
 }
 
 LazyDatabase _openConnection() {
@@ -117,7 +174,7 @@ LazyDatabase _openConnection() {
           await dbFolder.create(recursive: true);
         }
       }
-      
+
       final file = File(p.join(dbFolder.path, 'taskwire.db'));
       return NativeDatabase(file);
     } catch (e) {

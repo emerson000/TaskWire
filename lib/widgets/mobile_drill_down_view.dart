@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../models/task.dart';
 import '../services/task_manager.dart';
+import '../services/printer_service.dart';
 import 'task_tile.dart';
 import 'breadcrumb_navigation.dart';
+import 'print_menu.dart';
 
 class MobileDrillDownView extends StatefulWidget {
   final TaskManager taskManager;
+  final PrinterService printerService;
   final Function(int, {String? title, bool? isCompleted}) onUpdateTask;
   final Function(int) onDeleteTask;
   final Function(Task) onStartEditing;
@@ -20,6 +23,7 @@ class MobileDrillDownView extends StatefulWidget {
   const MobileDrillDownView({
     super.key,
     required this.taskManager,
+    required this.printerService,
     required this.onUpdateTask,
     required this.onDeleteTask,
     required this.onStartEditing,
@@ -49,7 +53,185 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
     _currentTasksFuture = _getCurrentTasks();
   }
 
+  Future<void> _printCurrentLevel() async {
+    try {
+      final tasks = await widget.taskManager.getTasksAtLevel(
+        _currentParent?.id?.toString(),
+      );
 
+      final levelTitle = _currentParent?.title ?? 'All Tasks';
+      final result = await widget.printerService.printTasksWithPrinterSelection(
+        tasks: tasks,
+        levelTitle: levelTitle,
+        includeSubtasks: false,
+        context: context,
+        printType: 'checklist',
+      );
+
+      if (result.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.successMessage!),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.errorMessage!),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error printing level: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _printCurrentLevelWithSubtasks() async {
+    try {
+      final tasks = await widget.taskManager.getTasksAtLevel(
+        _currentParent?.id?.toString(),
+      );
+
+      final levelTitle = _currentParent?.title ?? 'All Tasks';
+      final result = await widget.printerService.printTasksWithPrinterSelection(
+        tasks: tasks,
+        levelTitle: levelTitle,
+        includeSubtasks: true,
+        context: context,
+        printType: 'checklist',
+      );
+
+      if (result.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.successMessage!),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.errorMessage!),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error printing level with subtasks: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _printIndividualSlips() async {
+    try {
+      final tasks = await widget.taskManager.getTasksAtLevel(
+        _currentParent?.id?.toString(),
+      );
+
+      final hierarchyPath = _buildHierarchyPath();
+      final result = await widget.printerService.printTasksWithPrinterSelection(
+        tasks: tasks,
+        levelTitle: hierarchyPath,
+        includeSubtasks: false,
+        context: context,
+        printType: 'individual_slips',
+      );
+
+      if (result.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.successMessage!),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.errorMessage!),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error printing individual slips: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _printIndividualSlipsWithSubtasks() async {
+    try {
+      final tasks = await widget.taskManager.getTasksAtLevel(
+        _currentParent?.id?.toString(),
+      );
+
+      final hierarchyPath = _buildHierarchyPath();
+      final result = await widget.printerService.printTasksWithPrinterSelection(
+        tasks: tasks,
+        levelTitle: hierarchyPath,
+        includeSubtasks: true,
+        context: context,
+        printType: 'individual_slips',
+      );
+
+      if (result.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.successMessage!),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.errorMessage!),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error printing individual slips with subtasks: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  String _buildHierarchyPath() {
+    if (_currentParent == null) {
+      return 'All Tasks';
+    }
+    
+    final pathParts = <String>[];
+    
+    for (final task in _breadcrumbs) {
+      if (task != null) {
+        pathParts.add(task.title);
+      }
+    }
+    
+    if (pathParts.isEmpty) {
+      return 'All Tasks';
+    }
+    
+    return pathParts.join(' > ');
+  }
 
   @override
   void initState() {
@@ -94,7 +276,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
 
     try {
       await widget.taskManager.moveTaskToParent(draggedTask.id, targetTask.id);
-      
+
       if (mounted) {
         setState(() {
           _refreshTasks();
@@ -125,8 +307,11 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
 
   void _onBreadcrumbDrop(Task draggedTask, Task? targetParent) async {
     try {
-      await widget.taskManager.moveTaskToParent(draggedTask.id, targetParent?.id);
-      
+      await widget.taskManager.moveTaskToParent(
+        draggedTask.id,
+        targetParent?.id,
+      );
+
       if (mounted) {
         setState(() {
           _refreshTasks();
@@ -184,29 +369,40 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
                 onTaskDrop: _onBreadcrumbDrop,
                 isDragging: _isDragging,
               ),
-              if (_currentParent != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16.0,
-                    vertical: 8.0,
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Subtasks of "${_currentParent!.title}"',
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
-                      ),
-                      TextButton.icon(
-                        onPressed: () =>
-                            widget.onAddTask(_currentParent!.id.toString()),
-                        icon: const Icon(Icons.add, size: 16),
-                        label: const Text('Add Subtask'),
-                      ),
-                    ],
-                  ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 8.0,
                 ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _currentParent != null
+                            ? 'Subtasks of "${_currentParent!.title}"'
+                            : 'All Tasks',
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                    ),
+                    PrintMenu(
+                      onPrintLevel: _printCurrentLevel,
+                      onPrintWithSubtasks: _printCurrentLevelWithSubtasks,
+                      onPrintIndividualSlips: _printIndividualSlips,
+                      onPrintIndividualSlipsWithSubtasks: _printIndividualSlipsWithSubtasks,
+                      type: PrintMenuType.popup,
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton.icon(
+                      onPressed: () =>
+                          widget.onAddTask(_currentParent?.id?.toString()),
+                      icon: const Icon(Icons.add, size: 16),
+                      label: Text(
+                        _currentParent != null ? 'Add Subtask' : 'Add Task',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               Expanded(
                 child: Container(
                   decoration: BoxDecoration(

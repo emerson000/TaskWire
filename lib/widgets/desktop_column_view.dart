@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import '../models/task.dart';
 import '../services/task_manager.dart';
+import '../services/printer_service.dart';
 import 'task_tile.dart';
+import 'print_menu.dart';
 
 class DesktopColumnView extends StatefulWidget {
   final TaskManager taskManager;
+  final PrinterService printerService;
   final Function(int, {String? title, bool? isCompleted}) onUpdateTask;
   final Function(int) onDeleteTask;
   final Function(Task) onStartEditing;
@@ -16,6 +19,7 @@ class DesktopColumnView extends StatefulWidget {
   const DesktopColumnView({
     super.key,
     required this.taskManager,
+    required this.printerService,
     required this.onUpdateTask,
     required this.onDeleteTask,
     required this.onStartEditing,
@@ -95,6 +99,189 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
     setState(() {
       _columnHierarchy = _columnHierarchy.sublist(0, columnIndex + 1);
     });
+  }
+
+  Future<void> _printColumn(Task? parent) async {
+    try {
+      final tasks = await widget.taskManager.getTasksAtLevel(
+        parent?.id?.toString(),
+      );
+
+      final columnTitle = parent?.title ?? 'All Tasks';
+      final result = await widget.printerService.printTasksWithPrinterSelection(
+        tasks: tasks,
+        levelTitle: columnTitle,
+        includeSubtasks: false,
+        context: context,
+        printType: 'checklist',
+      );
+
+      if (result.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.successMessage!),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.errorMessage!),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error printing column: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _printColumnWithSubtasks(Task? parent) async {
+    try {
+      final tasks = await widget.taskManager.getTasksAtLevel(
+        parent?.id?.toString(),
+      );
+
+      final columnTitle = parent?.title ?? 'All Tasks';
+      final result = await widget.printerService.printTasksWithPrinterSelection(
+        tasks: tasks,
+        levelTitle: columnTitle,
+        includeSubtasks: true,
+        context: context,
+        printType: 'checklist',
+      );
+
+      if (result.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.successMessage!),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.errorMessage!),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error printing column with subtasks: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _printIndividualSlips(Task? parent) async {
+    try {
+      final tasks = await widget.taskManager.getTasksAtLevel(
+        parent?.id?.toString(),
+      );
+
+      final columnIndex = _columnHierarchy.indexOf(parent);
+      final hierarchyPath = _buildHierarchyPath(columnIndex);
+      final result = await widget.printerService.printTasksWithPrinterSelection(
+        tasks: tasks,
+        levelTitle: hierarchyPath,
+        includeSubtasks: false,
+        context: context,
+        printType: 'individual_slips',
+      );
+
+      if (result.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.successMessage!),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.errorMessage!),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error printing individual slips: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _printIndividualSlipsWithSubtasks(Task? parent) async {
+    try {
+      final tasks = await widget.taskManager.getTasksAtLevel(
+        parent?.id?.toString(),
+      );
+
+      final columnIndex = _columnHierarchy.indexOf(parent);
+      final hierarchyPath = _buildHierarchyPath(columnIndex);
+      final result = await widget.printerService.printTasksWithPrinterSelection(
+        tasks: tasks,
+        levelTitle: hierarchyPath,
+        includeSubtasks: true,
+        context: context,
+        printType: 'individual_slips',
+      );
+
+      if (result.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.successMessage!),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.errorMessage!),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error printing individual slips with subtasks: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  String _buildHierarchyPath(int columnIndex) {
+    if (columnIndex < 0 || columnIndex >= _columnHierarchy.length) {
+      return 'All Tasks';
+    }
+    
+    final pathParts = <String>[];
+    
+    for (int i = 0; i <= columnIndex; i++) {
+      final task = _columnHierarchy[i];
+      if (task != null) {
+        pathParts.add(task.title);
+      }
+    }
+    
+    if (pathParts.isEmpty) {
+      return 'All Tasks';
+    }
+    
+    return pathParts.join(' > ');
   }
 
   void _onTaskDrop(Task draggedTask, Task targetTask) {
@@ -294,33 +481,45 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
               tooltip: 'Go back',
             ),
           Expanded(
-            child: Text(
-              parent?.title ?? 'All Tasks',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-              overflow: TextOverflow.ellipsis,
+            child: Row(
+              spacing: 8.0,
+              children: [
+                Text(
+                  parent?.title ?? 'All Tasks',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (parent != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8.0,
+                      vertical: 4.0,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(12.0),
+                    ),
+                    child: Text(
+                      '${parent.subtaskCount}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
-          if (parent != null)
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 8.0,
-                vertical: 4.0,
-              ),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(12.0),
-              ),
-              child: Text(
-                '${parent.subtaskCount}',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onPrimaryContainer,
-                ),
-              ),
-            ),
+          PrintMenu(
+            onPrintLevel: () => _printColumn(parent),
+            onPrintWithSubtasks: () => _printColumnWithSubtasks(parent),
+            onPrintIndividualSlips: () => _printIndividualSlips(parent),
+            onPrintIndividualSlipsWithSubtasks: () => _printIndividualSlipsWithSubtasks(parent),
+            type: PrintMenuType.menuAnchor,
+          ),
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () => widget.onAddTask(parent?.id?.toString()),

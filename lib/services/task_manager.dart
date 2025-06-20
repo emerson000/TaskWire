@@ -1,23 +1,12 @@
 import '../models/task.dart' as domain;
 import '../repositories/task_repository.dart';
-import '../database/database.dart';
 
 class TaskManager {
-  TaskRepository? _repository;
-  AppDatabase? _database;
+  final TaskRepository _repo;
 
-  TaskRepository get _repo {
-    _repository ??= TaskRepository(_db);
-    return _repository!;
-  }
+  TaskManager(this._repo);
 
-  AppDatabase get _db {
-    _database ??= AppDatabase();
-    return _database!;
-  }
-
-  Future<List<domain.Task>> get rootTasks async =>
-      await _repo.getRootTasks();
+  Future<List<domain.Task>> get rootTasks async => await _repo.getRootTasks();
 
   Future<domain.Task> createTask(String title, {int? parentId}) async {
     if (parentId != null) {
@@ -39,11 +28,7 @@ class TaskManager {
     String? title,
     bool? isCompleted,
   }) async {
-    await _repo.updateTask(
-      taskId,
-      title: title,
-      isCompleted: isCompleted,
-    );
+    await _repo.updateTask(taskId, title: title, isCompleted: isCompleted);
   }
 
   Future<domain.Task?> findTaskById(int taskId) async {
