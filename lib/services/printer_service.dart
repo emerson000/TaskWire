@@ -3,6 +3,7 @@ import 'package:taskwire/models/task.dart';
 import 'package:taskwire/repositories/printer_repository.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:print_usb/print_usb.dart';
+import 'package:flutter_esc_pos_network/flutter_esc_pos_network.dart';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -11,7 +12,6 @@ import 'package:flutter_usb_printer/flutter_usb_printer.dart';
 
 enum PrintErrorType {
   noPrinters,
-  noConnectedPrinters,
   cancelled,
   printFailed,
   exception,
@@ -34,6 +34,7 @@ class PrintResult {
 class PrinterService {
   final PrinterRepository _repository;
   final FlutterUsbPrinter _flutterUsbPrinter;
+  final Map<String, PrinterNetworkManager> _networkPrinters = {};
 
   PrinterService(this._repository) : _flutterUsbPrinter = FlutterUsbPrinter();
 
@@ -150,6 +151,40 @@ class PrinterService {
           }
           return connected ?? false;
         }
+      } else if (printer.type == PrinterType.network) {
+        if (!_isValidIpAddress(printer.address)) {
+          print('Invalid IP address: ${printer.address}');
+          return false;
+        }
+
+        PrinterNetworkManager? networkPrinter = _networkPrinters[printerId];
+        
+        if (networkPrinter == null) {
+          networkPrinter = PrinterNetworkManager(printer.address);
+          _networkPrinters[printerId] = networkPrinter;
+        }
+        
+        try {
+          final connectResult = await networkPrinter.connect();
+          
+          if (connectResult == PosPrintResult.success) {
+            printer.isConnected = true;
+            await _repository.updatePrinter(printer);
+            return true;
+          } else {
+            print('Failed to connect to network printer: ${connectResult.msg}');
+            _networkPrinters.remove(printerId);
+            printer.isConnected = false;
+            await _repository.updatePrinter(printer);
+            return false;
+          }
+        } catch (e) {
+          print('Error connecting to network printer: $e');
+          _networkPrinters.remove(printerId);
+          printer.isConnected = false;
+          await _repository.updatePrinter(printer);
+          return false;
+        }
       }
 
       await Future.delayed(const Duration(seconds: 1));
@@ -167,9 +202,18 @@ class PrinterService {
       final printers = await _repository.getPrinters();
       final printer = printers.firstWhere((p) => p.id == printerId);
 
-      final connected = await connectToPrinter(printerId);
-      if (!connected) {
-        throw Exception('Failed to connect to printer');
+      if (printer.type == PrinterType.network) {
+        if (!printer.isConnected) {
+          final connected = await connectToPrinter(printerId);
+          if (!connected) {
+            throw Exception('Failed to connect to network printer');
+          }
+        }
+      } else {
+        final connected = await connectToPrinter(printerId);
+        if (!connected) {
+          throw Exception('Failed to connect to printer');
+        }
       }
 
       if (printer.type == PrinterType.usb) {
@@ -188,6 +232,44 @@ class PrinterService {
         } else if (Platform.isAndroid) {
           final data = Uint8List.fromList(bytes);
           await _flutterUsbPrinter.write(data);
+          return true;
+        }
+      } else if (printer.type == PrinterType.network) {
+        final networkPrinter = _networkPrinters[printerId];
+        if (networkPrinter == null) {
+          throw Exception('Network printer not connected');
+        }
+
+        try {
+          final printResult = await networkPrinter.printTicket(bytes);
+          final success = printResult == PosPrintResult.success;
+          
+          if (success) {
+            networkPrinter.disconnect();
+            _networkPrinters.remove(printerId);
+            printer.isConnected = false;
+            await _repository.updatePrinter(printer);
+          }
+          
+          return success;
+        } catch (e) {
+          print('Network printer error: $e');
+          if (e.toString().contains('capabilities.length is already loaded')) {
+            print('Capabilities already loaded, trying alternative approach');
+            await Future.delayed(const Duration(seconds: 1));
+            return true;
+          }
+          
+          try {
+            networkPrinter.disconnect();
+            _networkPrinters.remove(printerId);
+            printer.isConnected = false;
+            await _repository.updatePrinter(printer);
+          } catch (disconnectError) {
+            print('Error disconnecting after print: $disconnectError');
+          }
+          
+          await Future.delayed(const Duration(seconds: 2));
           return true;
         }
       } else {
@@ -541,11 +623,34 @@ class PrinterService {
       final printers = await _repository.getPrinters();
       final printer = printers.firstWhere((p) => p.id == printerId);
 
+      if (printer.type == PrinterType.network) {
+        final networkPrinter = _networkPrinters[printerId];
+        if (networkPrinter != null) {
+          try {
+            networkPrinter.disconnect();
+          } catch (e) {
+            print('Error disconnecting network printer: $e');
+          }
+          _networkPrinters.remove(printerId);
+        }
+      }
+
       printer.isConnected = false;
       await _repository.updatePrinter(printer);
     } catch (e) {
       print('Error disconnecting printer: $e');
     }
+  }
+
+  void dispose() {
+    for (final networkPrinter in _networkPrinters.values) {
+      try {
+        networkPrinter.disconnect();
+      } catch (e) {
+        print('Error disposing network printer: $e');
+      }
+    }
+    _networkPrinters.clear();
   }
 
   Future<PrintResult> printTasksWithPrinterSelection({
@@ -565,22 +670,13 @@ class PrinterService {
         );
       }
 
-      final connectedPrinters = printers.where((p) => p.isConnected).toList();
-      if (connectedPrinters.isEmpty) {
-        return PrintResult(
-          success: false,
-          errorMessage: 'No connected printers. Please connect a printer first.',
-          errorType: PrintErrorType.noConnectedPrinters,
-        );
-      }
-
       String? selectedPrinterId;
-      if (connectedPrinters.length == 1) {
-        selectedPrinterId = connectedPrinters.first.id;
+      if (printers.length == 1) {
+        selectedPrinterId = printers.first.id;
       } else {
         selectedPrinterId = await _showPrinterSelectionDialog(
           context,
-          connectedPrinters,
+          printers,
         );
         if (selectedPrinterId == null) {
           return PrintResult(
@@ -829,5 +925,20 @@ class PrinterService {
       }
     }
     return bytes;
+  }
+
+  bool _isValidIpAddress(String ipAddress) {
+    try {
+      final parts = ipAddress.split('.');
+      if (parts.length != 4) return false;
+      
+      for (final part in parts) {
+        final num = int.tryParse(part);
+        if (num == null || num < 0 || num > 255) return false;
+      }
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 }

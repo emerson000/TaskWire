@@ -21,6 +21,12 @@ class PrinterProvider extends ChangeNotifier {
   bool _isScanning = false;
   bool get isScanning => _isScanning;
 
+  @override
+  void dispose() {
+    _printerService.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadPrinters() async {
     _savedPrinters = await _printerService.getPrinters();
     notifyListeners();
@@ -51,9 +57,9 @@ class PrinterProvider extends ChangeNotifier {
     await _loadPrinters();
   }
 
-  Future<void> addManualPrinter(String ipAddress) async {
+  Future<void> addManualPrinter(String name, String ipAddress) async {
     final printer = Printer(
-      name: 'Network Printer',
+      name: name,
       type: PrinterType.network,
       address: ipAddress,
     );
@@ -169,29 +175,27 @@ class PrinterSettingsPage extends StatelessWidget {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (printer.type == PrinterType.usb) ...[
-              IconButton(
-                icon: Icon(
-                  printer.isConnected ? Icons.link : Icons.link_off,
-                  color: printer.isConnected ? Colors.green : Colors.grey,
-                ),
-                onPressed: () async {
-                  if (printer.isConnected) {
-                    await provider.disconnectPrinter(printer.id);
-                  } else {
-                    await provider.connectToPrinter(printer.id);
-                  }
-                },
-                tooltip: printer.isConnected ? 'Disconnect' : 'Connect',
+            IconButton(
+              icon: Icon(
+                printer.isConnected ? Icons.link : Icons.link_off,
+                color: printer.isConnected ? Colors.green : Colors.grey,
               ),
-              IconButton(
-                icon: const Icon(Icons.print, color: Colors.blue),
-                onPressed: printer.isConnected
-                    ? () => provider.testPrint(printer.id)
-                    : null,
-                tooltip: 'Test Print',
-              ),
-            ],
+              onPressed: () async {
+                if (printer.isConnected) {
+                  await provider.disconnectPrinter(printer.id);
+                } else {
+                  await provider.connectToPrinter(printer.id);
+                }
+              },
+              tooltip: printer.isConnected ? 'Disconnect' : 'Connect',
+            ),
+            IconButton(
+              icon: const Icon(Icons.print, color: Colors.blue),
+              onPressed: printer.isConnected
+                  ? () => provider.testPrint(printer.id)
+                  : null,
+              tooltip: 'Test Print',
+            ),
             IconButton(
               icon: const Icon(Icons.delete_outline, color: Colors.red),
               onPressed: () async {
@@ -252,6 +256,7 @@ class PrinterSettingsPage extends StatelessWidget {
   }
 
   void _showAddManualPrinterDialog(BuildContext context) {
+    final nameController = TextEditingController();
     final ipController = TextEditingController();
     final provider = Provider.of<PrinterProvider>(context, listen: false);
 
@@ -260,13 +265,49 @@ class PrinterSettingsPage extends StatelessWidget {
       builder: (ctx) {
         return AlertDialog(
           title: const Text('Add Network Printer Manually'),
-          content: TextField(
-            controller: ipController,
-            decoration: const InputDecoration(
-              labelText: 'Printer IP Address',
-              hintText: '192.168.1.100',
-            ),
-            keyboardType: TextInputType.number,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Printer Name',
+                  hintText: 'My Network Printer',
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: ipController,
+                decoration: const InputDecoration(
+                  labelText: 'Printer IP Address',
+                  hintText: '192.168.1.100',
+                ),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.orange, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Network printers will automatically disconnect after each print job to ensure proper processing.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.orange.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
           actions: [
             TextButton(
@@ -276,10 +317,18 @@ class PrinterSettingsPage extends StatelessWidget {
             TextButton(
               child: const Text('Add'),
               onPressed: () {
-                if (ipController.text.isNotEmpty) {
-                  // Basic validation, can be improved with a regex
-                  provider.addManualPrinter(ipController.text);
-                  Navigator.of(ctx).pop();
+                if (nameController.text.isNotEmpty && ipController.text.isNotEmpty) {
+                  if (_isValidIpAddress(ipController.text)) {
+                    provider.addManualPrinter(nameController.text, ipController.text);
+                    Navigator.of(ctx).pop();
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Please enter a valid IP address (e.g., 192.168.1.100)'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
                 }
               },
             ),
@@ -287,5 +336,20 @@ class PrinterSettingsPage extends StatelessWidget {
         );
       },
     );
+  }
+
+  bool _isValidIpAddress(String ipAddress) {
+    try {
+      final parts = ipAddress.split('.');
+      if (parts.length != 4) return false;
+      
+      for (final part in parts) {
+        final num = int.tryParse(part);
+        if (num == null || num < 0 || num > 255) return false;
+      }
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 }
