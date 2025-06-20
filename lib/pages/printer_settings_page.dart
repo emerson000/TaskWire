@@ -282,7 +282,7 @@ class PrinterSettingsPage extends StatelessWidget {
                   labelText: 'Printer IP Address',
                   hintText: '192.168.1.100',
                 ),
-                keyboardType: TextInputType.number,
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
               ),
               const SizedBox(height: 16),
               Container(
