@@ -47,9 +47,61 @@ workflows:
         submit_to_app_store: false
     triggering:
       events:
-        - push
-        - pull_request
+        - tag
       branch_patterns:
-        - pattern: 'main'
+        - pattern: "main"
           include: true
           source: true
+
+  windows-workflow:
+      name: Windows workflow
+      instance_type: windows_x2
+      max_build_duration: 15
+      environment:
+        flutter: stable
+      cache:
+        cache_paths:
+          - ~/.pub-cache
+      scripts:
+        - name: Get Flutter packages
+          script: flutter packages pub get
+        - name: Configure for Windows
+          script: flutter config --enable-windows-desktop
+        - name: Build Windows
+          script: flutter build windows
+        - name: Build MSI
+          script: |
+            cd windows/installer
+            ./build_msi.bat
+      artifacts:
+        - windows/installer/TaskWire.msi
+      triggering:
+        events:
+          - tag
+        branch_patterns:
+          - pattern: "main"
+            include: true
+            source: true
+
+  windows-release-workflow:
+    name: Windows release workflow
+    instance_type: windows_x2
+    max_build_duration: 15
+    environment:
+      groups:
+        - windows-signing
+      flutter: master
+    cache:
+      cache_paths:
+        - ~/.pub-cache
+    scripts:
+      - name: Get Flutter packages
+        script: flutter packages pub get
+      - name: Configure for Windows
+        script: flutter config --enable-windows-desktop
+      - name: Build Windows
+        script: flutter build windows
+      - name: Package Windows
+        script: flutter pub run msix:create
+    artifacts:
+      - build/windows/**/*.msix
