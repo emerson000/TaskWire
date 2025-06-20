@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "taskwire" "\0"
+            VALUE "CompanyName", "io.taskwire.windows" "\0"
+            VALUE "FileDescription", "TaskWire" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "taskwire" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2025 com.example. All rights reserved." "\0"
+            VALUE "InternalName", "TaskWire" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2025 TaskWire. This software is licensed under the MIT License." "\0"
             VALUE "OriginalFilename", "taskwire.exe" "\0"
-            VALUE "ProductName", "taskwire" "\0"
+            VALUE "ProductName", "TaskWire" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

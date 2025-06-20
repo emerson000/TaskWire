@@ -11,4 +11,4 @@ PRODUCT_NAME = taskwire
 PRODUCT_BUNDLE_IDENTIFIER = io.taskwire.macos
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2025 com.example. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright (C) 2025 TaskWire. This software is licensed under the MIT License.
