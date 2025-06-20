@@ -193,3 +193,117 @@ class TaskTile extends StatelessWidget {
     );
   }
 }
+
+class AddTaskTile extends StatefulWidget {
+  final String? parentId;
+  final String? parentTitle;
+  final Function(String taskTitle, String? parentId) onAddTask;
+  final VoidCallback? onCancel;
+
+  const AddTaskTile({
+    super.key,
+    this.parentId,
+    this.parentTitle,
+    required this.onAddTask,
+    this.onCancel,
+  });
+
+  @override
+  State<AddTaskTile> createState() => _AddTaskTileState();
+}
+
+class _AddTaskTileState extends State<AddTaskTile> {
+  final TextEditingController _controller = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
+  bool _isAdding = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusNode.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submitTask() async {
+    if (_controller.text.trim().isEmpty) return;
+
+    setState(() {
+      _isAdding = true;
+    });
+
+    try {
+      await widget.onAddTask(_controller.text.trim(), widget.parentId);
+      _controller.clear();
+      // Refocus the text input for continuous adding
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _focusNode.requestFocus();
+      });
+    } finally {
+      setState(() {
+        _isAdding = false;
+      });
+    }
+  }
+
+  void _cancel() {
+    _controller.clear();
+    widget.onCancel?.call();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Row(
+        children: [
+          Icon(
+            Icons.add_circle_outline,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: TextField(
+              controller: _controller,
+              focusNode: _focusNode,
+              autofocus: true,
+              enabled: !_isAdding,
+              decoration: InputDecoration(
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 8.0),
+                hintText: widget.parentTitle != null
+                    ? 'Add subtask'
+                    : 'Add new task',
+                border: InputBorder.none,
+              ),
+              onSubmitted: (_) => _submitTask(),
+            ),
+          ),
+          if (_isAdding)
+            const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          else ...[
+            IconButton(
+              icon: const Icon(Icons.check),
+              onPressed: _submitTask,
+            ),
+            IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: _cancel,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}

@@ -14,7 +14,13 @@ class DesktopColumnView extends StatefulWidget {
   final Function() onFinishEditing;
   final int? editingTaskId;
   final TextEditingController editController;
-  final Function(String?) onAddTask;
+  final Function(String?, String?, {int? columnIndex}) onAddTask;
+  final Function(String, String?) onCreateTask;
+  final bool showAddTask;
+  final String? addTaskParentId;
+  final String? addTaskParentTitle;
+  final int? addTaskColumnIndex;
+  final VoidCallback onHideAddTask;
 
   const DesktopColumnView({
     super.key,
@@ -27,6 +33,12 @@ class DesktopColumnView extends StatefulWidget {
     this.editingTaskId,
     required this.editController,
     required this.onAddTask,
+    required this.onCreateTask,
+    required this.showAddTask,
+    this.addTaskParentId,
+    this.addTaskParentTitle,
+    this.addTaskColumnIndex,
+    required this.onHideAddTask,
   });
 
   @override
@@ -424,8 +436,17 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                         : null,
                   ),
                   child: ListView.builder(
-                    itemCount: tasks.length,
+                    itemCount: tasks.length + (widget.showAddTask && widget.addTaskColumnIndex == columnIndex ? 1 : 0),
                     itemBuilder: (context, index) {
+                      if (widget.showAddTask && widget.addTaskColumnIndex == columnIndex && index == tasks.length) {
+                        return AddTaskTile(
+                          parentId: parent?.id?.toString(),
+                          parentTitle: parent?.title,
+                          onAddTask: widget.onCreateTask,
+                          onCancel: widget.onHideAddTask,
+                        );
+                      }
+                      
                       final task = tasks[index];
                       return DragTarget<Task>(
                         onWillAccept: (data) =>
@@ -522,7 +543,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
           ),
           IconButton(
             icon: const Icon(Icons.add),
-            onPressed: () => widget.onAddTask(parent?.id?.toString()),
+            onPressed: () => widget.onAddTask(null, parent?.id?.toString(), columnIndex: columnIndex),
             tooltip: parent != null
                 ? 'Add subtask to ${parent.title}'
                 : 'Add new task',

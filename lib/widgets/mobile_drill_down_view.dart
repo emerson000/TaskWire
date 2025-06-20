@@ -16,7 +16,12 @@ class MobileDrillDownView extends StatefulWidget {
   final Function() onFinishEditing;
   final int? editingTaskId;
   final TextEditingController editController;
-  final Function(String?) onAddTask;
+  final Function(String?, String?, {int? columnIndex}) onAddTask;
+  final Function(String, String?) onCreateTask;
+  final VoidCallback onHideAddTask;
+  final bool showAddTask;
+  final String? addTaskParentId;
+  final String? addTaskParentTitle;
   final VoidCallback? onRefresh;
   final int? refreshKey;
 
@@ -31,6 +36,11 @@ class MobileDrillDownView extends StatefulWidget {
     this.editingTaskId,
     required this.editController,
     required this.onAddTask,
+    required this.onCreateTask,
+    required this.onHideAddTask,
+    required this.showAddTask,
+    this.addTaskParentId,
+    this.addTaskParentTitle,
     this.onRefresh,
     this.refreshKey,
   });
@@ -394,7 +404,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
                     const SizedBox(width: 8),
                     TextButton.icon(
                       onPressed: () =>
-                          widget.onAddTask(_currentParent?.id?.toString()),
+                          widget.onAddTask(_currentParent?.id?.toString(), _currentParent?.title, columnIndex: null),
                       icon: const Icon(Icons.add, size: 16),
                       label: Text(
                         _currentParent != null ? 'Add Subtask' : 'Add Task',
@@ -421,8 +431,17 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
                       }
                       final tasks = snapshot.data!;
                       return ListView.builder(
-                        itemCount: tasks.length,
+                        itemCount: tasks.length + (widget.showAddTask && widget.addTaskParentId == _currentParent?.id?.toString() ? 1 : 0),
                         itemBuilder: (context, index) {
+                          if (widget.showAddTask && widget.addTaskParentId == _currentParent?.id?.toString() && index == tasks.length) {
+                            return AddTaskTile(
+                              parentId: _currentParent?.id?.toString(),
+                              parentTitle: _currentParent?.title,
+                              onAddTask: widget.onCreateTask,
+                              onCancel: widget.onHideAddTask,
+                            );
+                          }
+                          
                           final task = tasks[index];
                           return DragTarget<Task>(
                             onWillAccept: (data) =>

@@ -7,6 +7,7 @@ import '../services/printer_service.dart';
 import '../repositories/printer_repository.dart';
 import '../widgets/desktop_column_view.dart';
 import '../widgets/mobile_drill_down_view.dart';
+import '../widgets/task_tile.dart';
 
 class ListPage extends StatefulWidget {
   const ListPage({super.key});
@@ -22,8 +23,10 @@ class _ListPageState extends State<ListPage> {
   );
   int? _editingTaskId;
   final TextEditingController _editController = TextEditingController();
-  final TextEditingController _newTaskController = TextEditingController();
   bool _showAddTask = false;
+  String? _addTaskParentId;
+  String? _addTaskParentTitle;
+  int? _addTaskColumnIndex;
   int _refreshCounter = 0;
 
   static const double _desktopBreakpoint = 800.0;
@@ -41,7 +44,6 @@ class _ListPageState extends State<ListPage> {
   @override
   void dispose() {
     _editController.dispose();
-    _newTaskController.dispose();
     super.dispose();
   }
 
@@ -49,24 +51,44 @@ class _ListPageState extends State<ListPage> {
     return MediaQuery.of(context).size.width >= _desktopBreakpoint;
   }
 
-  Future<void> _addTask(String? parentId) async {
-    if (_newTaskController.text.trim().isEmpty) return;
+  Future<void> _addTask(String taskTitle, String? parentId) async {
+    if (taskTitle.trim().isEmpty) return;
 
     try {
       await _taskManager.createTask(
-        _newTaskController.text.trim(),
+        taskTitle.trim(),
         parentId: parentId != null ? int.parse(parentId) : null,
       );
-      _newTaskController.clear();
       setState(() {
-        _showAddTask = false;
         _refreshCounter++;
+        if (_addTaskParentId != parentId) {
+          _addTaskParentId = parentId;
+          _addTaskParentTitle = null;
+        }
       });
     } catch (e) {
       if (kDebugMode) {
         print('Error creating task: $e');
       }
     }
+  }
+
+  void _showAddTaskInline(String? parentId, String? parentTitle, {int? columnIndex}) {
+    setState(() {
+      _showAddTask = true;
+      _addTaskParentId = parentId;
+      _addTaskParentTitle = parentTitle;
+      _addTaskColumnIndex = columnIndex;
+    });
+  }
+
+  void _hideAddTaskInline() {
+    setState(() {
+      _showAddTask = false;
+      _addTaskParentId = null;
+      _addTaskParentTitle = null;
+      _addTaskColumnIndex = null;
+    });
   }
 
   Future<void> _deleteTask(int taskId) async {
@@ -141,7 +163,7 @@ class _ListPageState extends State<ListPage> {
       body: isDesktop ? _buildDesktopView() : _buildMobileView(),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          _showAddTaskDialog(null);
+          _showAddTaskInline(null, null);
         },
         tooltip: 'Add Task',
         child: const Icon(Icons.add),
@@ -159,7 +181,13 @@ class _ListPageState extends State<ListPage> {
       onFinishEditing: _finishEditing,
       editingTaskId: _editingTaskId,
       editController: _editController,
-      onAddTask: _showAddTaskDialog,
+      onAddTask: _showAddTaskInline,
+      onCreateTask: _addTask,
+      showAddTask: _showAddTask,
+      addTaskParentId: _addTaskParentId,
+      addTaskParentTitle: _addTaskParentTitle,
+      addTaskColumnIndex: _addTaskColumnIndex,
+      onHideAddTask: _hideAddTaskInline,
     );
   }
 
@@ -173,56 +201,13 @@ class _ListPageState extends State<ListPage> {
       onFinishEditing: _finishEditing,
       editingTaskId: _editingTaskId,
       editController: _editController,
-      onAddTask: _showAddTaskDialog,
+      onAddTask: _showAddTaskInline,
+      onCreateTask: _addTask,
+      onHideAddTask: _hideAddTaskInline,
+      showAddTask: _showAddTask,
+      addTaskParentId: _addTaskParentId,
+      addTaskParentTitle: _addTaskParentTitle,
       refreshKey: _refreshCounter,
-    );
-  }
-
-  Future<void> _showAddTaskDialog(String? parentId) async {
-    Task? parentTask;
-    if (parentId != null) {
-      parentTask = await _taskManager.findTaskById(int.parse(parentId));
-    }
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          parentTask != null
-              ? 'Add Subtask to "${parentTask.title}"'
-              : 'Add New Task',
-        ),
-        content: TextField(
-          controller: _newTaskController,
-          autofocus: true,
-          decoration: InputDecoration(
-            hintText: parentTask != null
-                ? 'Enter subtask title'
-                : 'Enter task title',
-            border: const OutlineInputBorder(),
-          ),
-          onSubmitted: (_) async {
-            await _addTask(parentId);
-            Navigator.pop(context);
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              _newTaskController.clear();
-              Navigator.pop(context);
-            },
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              await _addTask(parentId);
-              Navigator.pop(context);
-            },
-            child: const Text('Add'),
-          ),
-        ],
-      ),
     );
   }
 }
