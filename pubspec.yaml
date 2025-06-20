@@ -16,7 +16,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+22
+version: 1.0.0+23
 
 environment:
   sdk: ^3.8.1
@@ -49,6 +49,7 @@ dependencies:
       url: https://github.com/kechankrisna/flutter_usb_printer
       ref: master
   msix: ^3.16.9
+  flutter_launcher_icons: ^0.14.4
 
 dev_dependencies:
   flutter_test:
@@ -111,3 +112,18 @@ msix_config:
   capabilities: internetClient
   publisher: CN=TaskWire, O=TaskWire
   sign_msix: false
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon/icon.png"
+  min_sdk_android: 21
+  web:
+    generate: true
+    background_color: "#FFFFFF"
+    theme_color: "#8B5CF6"
+  windows:
+    generate: true
+    icon_size: 256
+  macos:
+    generate: true
