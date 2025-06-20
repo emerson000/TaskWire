@@ -6,6 +6,8 @@ workflows:
     integrations:
       app_store_connect: Emerson Stewart
     environment:
+      groups:
+        - default
       ios_signing:
         distribution_type: app_store
         bundle_identifier: io.taskwire.ios
@@ -59,6 +61,8 @@ workflows:
       max_build_duration: 15
       environment:
         flutter: stable
+        groups:
+          - default
       cache:
         cache_paths:
           - ~/.pub-cache
@@ -73,6 +77,12 @@ workflows:
           script: |
             cd windows/installer
             ./build_msi.bat
+        - name: Publish to GitHub
+          script: |
+            gh release create "${CM_TAG}" \
+              --title "TaskWire ${CM_TAG}" \
+              windows/installer/TaskWire.msi \
+              --clobber
       artifacts:
         - windows/installer/TaskWire.msi
       triggering:
@@ -89,6 +99,7 @@ workflows:
     max_build_duration: 15
     environment:
       groups:
+        - default
         - windows-signing
       flutter: master
     cache:
