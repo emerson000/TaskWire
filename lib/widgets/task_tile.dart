@@ -158,6 +158,7 @@ class TaskTile extends StatelessWidget {
             child: TextField(
               controller: editController,
               autofocus: true,
+              textCapitalization: TextCapitalization.sentences,
               decoration: const InputDecoration(
                 isDense: true,
                 contentPadding: EdgeInsets.symmetric(vertical: 8.0),
@@ -275,6 +276,7 @@ class _AddTaskTileState extends State<AddTaskTile> {
               focusNode: _focusNode,
               autofocus: true,
               enabled: !_isAdding,
+              textCapitalization: TextCapitalization.sentences,
               decoration: InputDecoration(
                 isDense: true,
                 contentPadding: const EdgeInsets.symmetric(vertical: 8.0),

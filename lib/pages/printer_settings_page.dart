@@ -270,6 +270,7 @@ class PrinterSettingsPage extends StatelessWidget {
             children: [
               TextField(
                 controller: nameController,
+                textCapitalization: TextCapitalization.words,
                 decoration: const InputDecoration(
                   labelText: 'Printer Name',
                   hintText: 'My Network Printer',
