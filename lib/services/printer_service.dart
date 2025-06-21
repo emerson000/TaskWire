@@ -38,6 +38,13 @@ class PrinterService {
 
   PrinterService(this._repository) : _flutterUsbPrinter = FlutterUsbPrinter();
 
+  Future<Generator> _createGenerator() async {
+    final profile = await CapabilityProfile.load();
+    final generator = Generator(PaperSize.mm80, profile);
+    generator.setGlobalFont(PosFontType.fontA, maxCharsPerLine: 42);
+    return generator;
+  }
+
   Future<List<Printer>> getPrinters() {
     return _repository.getPrinters();
   }
@@ -374,22 +381,17 @@ class PrinterService {
     List<Task> tasks,
     String? columnTitle,
   ) async {
-    final profile = await CapabilityProfile.load();
-    final generator = Generator(PaperSize.mm80, profile);
-    generator.setGlobalFont(PosFontType.fontA);
+    final generator = await _createGenerator();
 
     List<int> bytes = [];
     bytes += generator.reset();
 
     final title = columnTitle ?? 'TaskWire Column';
-    bytes += generator.text(
+    bytes += _wrapTextForSize2(
+      generator,
       title,
-      styles: PosStyles(
-        height: PosTextSize.size2,
-        width: PosTextSize.size2,
-        align: PosAlign.center,
-        bold: true,
-      ),
+      align: PosAlign.center,
+      bold: true,
     );
 
     bytes += generator.text(
@@ -499,22 +501,17 @@ class PrinterService {
     List<Task> tasks,
     String? columnTitle,
   ) async {
-    final profile = await CapabilityProfile.load();
-    final generator = Generator(PaperSize.mm80, profile);
-    generator.setGlobalFont(PosFontType.fontA);
+    final generator = await _createGenerator();
 
     List<int> bytes = [];
     bytes += generator.reset();
 
     final title = columnTitle ?? 'TaskWire Column';
-    bytes += generator.text(
+    bytes += _wrapTextForSize2(
+      generator,
       title,
-      styles: PosStyles(
-        height: PosTextSize.size2,
-        width: PosTextSize.size2,
-        align: PosAlign.center,
-        bold: true,
-      ),
+      align: PosAlign.center,
+      bold: true,
     );
 
     bytes += generator.text(
@@ -591,18 +588,14 @@ class PrinterService {
   }
 
   Future<List<int>> _generateTestReceiptBytes() async {
-    final profile = await CapabilityProfile.load();
-    final generator = Generator(PaperSize.mm80, profile);
+    final generator = await _createGenerator();
 
     List<int> bytes = [];
     bytes += generator.reset();
-    bytes += generator.text(
-      'TaskWire PrinterTTTest',
-      styles: PosStyles(
-        height: PosTextSize.size2,
-        width: PosTextSize.size2,
-        align: PosAlign.center,
-      ),
+    bytes += _wrapTextForSize2(
+      generator,
+      'TaskWire Printer Test',
+      align: PosAlign.center,
     );
     bytes += generator.text(
       'Date: ${DateTime.now()}',
@@ -779,9 +772,7 @@ class PrinterService {
     Task task,
     String? hierarchyPath,
   ) async {
-    final profile = await CapabilityProfile.load();
-    final generator = Generator(PaperSize.mm80, profile);
-    generator.setGlobalFont(PosFontType.fontA);
+    final generator = await _createGenerator();
 
     List<int> bytes = [];
     bytes += generator.reset();
@@ -799,14 +790,11 @@ class PrinterService {
       bytes += generator.text('');
     }
 
-    bytes += generator.text(
+    bytes += _wrapTextForSize2(
+      generator,
       task.title,
-      styles: PosStyles(
-        height: PosTextSize.size3,
-        width: PosTextSize.size3,
-        align: PosAlign.center,
-        bold: true,
-      ),
+      align: PosAlign.center,
+      bold: true,
     );
 
     bytes += generator.text('');
@@ -839,9 +827,7 @@ class PrinterService {
     Task task,
     String? hierarchyPath,
   ) async {
-    final profile = await CapabilityProfile.load();
-    final generator = Generator(PaperSize.mm80, profile);
-    generator.setGlobalFont(PosFontType.fontA);
+    final generator = await _createGenerator();
 
     List<int> bytes = [];
     bytes += generator.reset();
@@ -859,14 +845,11 @@ class PrinterService {
       bytes += generator.text('');
     }
 
-    bytes += generator.text(
+    bytes += _wrapTextForSize2(
+      generator,
       task.title,
-      styles: PosStyles(
-        height: PosTextSize.size3,
-        width: PosTextSize.size3,
-        align: PosAlign.center,
-        bold: true,
-      ),
+      align: PosAlign.left,
+      bold: true,
     );
 
     bytes += generator.text('');
@@ -907,7 +890,7 @@ class PrinterService {
     for (final subtask in subtasks) {
       final indent = '  ' * level;
       bytes += generator.text(
-        '$indent[ ] ${subtask.title}',
+        '$indent[${subtask.isCompleted ? 'X' : ' '}] ${subtask.title}',
         styles: PosStyles(
           height: PosTextSize.size1,
           width: PosTextSize.size1,
@@ -938,5 +921,21 @@ class PrinterService {
     } catch (e) {
       return false;
     }
+  }
+
+  List<int> _wrapTextForSize2(Generator generator, String text, {
+    PosAlign align = PosAlign.left,
+    bool bold = false,
+  }) {
+    return generator.text(
+      text.trim(),
+      styles: PosStyles(
+        height: PosTextSize.size2,
+        width: PosTextSize.size2,
+        align: align,
+        bold: bold,
+      ),
+      maxCharsPerLine: 14,
+    );
   }
 }
