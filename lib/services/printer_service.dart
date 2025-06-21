@@ -197,7 +197,7 @@ class PrinterService {
     }
   }
 
-  Future<bool> printJob(String printerId, List<int> bytes) async {
+  Future<bool> printJob(String printerId, List<int> bytes, {bool keepConnected = false}) async {
     try {
       final printers = await _repository.getPrinters();
       final printer = printers.firstWhere((p) => p.id == printerId);
@@ -244,7 +244,7 @@ class PrinterService {
           final printResult = await networkPrinter.printTicket(bytes);
           final success = printResult == PosPrintResult.success;
           
-          if (success) {
+          if (success && !keepConnected) {
             networkPrinter.disconnect();
             _networkPrinters.remove(printerId);
             printer.isConnected = false;
@@ -260,13 +260,15 @@ class PrinterService {
             return true;
           }
           
-          try {
-            networkPrinter.disconnect();
-            _networkPrinters.remove(printerId);
-            printer.isConnected = false;
-            await _repository.updatePrinter(printer);
-          } catch (disconnectError) {
-            print('Error disconnecting after print: $disconnectError');
+          if (!keepConnected) {
+            try {
+              networkPrinter.disconnect();
+              _networkPrinters.remove(printerId);
+              printer.isConnected = false;
+              await _repository.updatePrinter(printer);
+            } catch (disconnectError) {
+              print('Error disconnecting after print: $disconnectError');
+            }
           }
           
           await Future.delayed(const Duration(seconds: 2));
@@ -336,9 +338,11 @@ class PrinterService {
         return true;
       }
       
-      for (final task in incompleteTasks) {
+      for (int i = 0; i < incompleteTasks.length; i++) {
+        final task = incompleteTasks[i];
         final slipBytes = await _generateIndividualSlipBytes(task, hierarchyPath);
-        final success = await printJob(printerId, slipBytes);
+        final isLastTask = i == incompleteTasks.length - 1;
+        final success = await printJob(printerId, slipBytes, keepConnected: !isLastTask);
         if (!success) return false;
       }
       return true;
@@ -360,9 +364,11 @@ class PrinterService {
         return true;
       }
       
-      for (final task in incompleteTasks) {
+      for (int i = 0; i < incompleteTasks.length; i++) {
+        final task = incompleteTasks[i];
         final slipBytes = await _generateIndividualSlipWithSubtasksBytes(task, hierarchyPath);
-        final success = await printJob(printerId, slipBytes);
+        final isLastTask = i == incompleteTasks.length - 1;
+        final success = await printJob(printerId, slipBytes, keepConnected: !isLastTask);
         if (!success) return false;
       }
       return true;
