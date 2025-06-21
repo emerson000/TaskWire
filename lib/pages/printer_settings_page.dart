@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:taskwire/models/printer.dart';
@@ -111,6 +113,7 @@ class PrinterSettingsPage extends StatelessWidget {
                 const SizedBox(height: 8),
                 Row(
                   children: [
+                    if (Platform.isAndroid || Platform.isWindows)
                     Expanded(
                       child: ElevatedButton.icon(
                         onPressed: provider.isScanning
