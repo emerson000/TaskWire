@@ -175,23 +175,24 @@ class PrinterSettingsPage extends StatelessWidget {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            IconButton(
-              icon: Icon(
-                printer.isConnected ? Icons.link : Icons.link_off,
-                color: printer.isConnected ? Colors.green : Colors.grey,
+            if (printer.type != PrinterType.network)
+              IconButton(
+                icon: Icon(
+                  printer.isConnected ? Icons.link : Icons.link_off,
+                  color: printer.isConnected ? Colors.green : Colors.grey,
+                ),
+                onPressed: () async {
+                  if (printer.isConnected) {
+                    await provider.disconnectPrinter(printer.id);
+                  } else {
+                    await provider.connectToPrinter(printer.id);
+                  }
+                },
+                tooltip: printer.isConnected ? 'Disconnect' : 'Connect',
               ),
-              onPressed: () async {
-                if (printer.isConnected) {
-                  await provider.disconnectPrinter(printer.id);
-                } else {
-                  await provider.connectToPrinter(printer.id);
-                }
-              },
-              tooltip: printer.isConnected ? 'Disconnect' : 'Connect',
-            ),
             IconButton(
               icon: const Icon(Icons.print, color: Colors.blue),
-              onPressed: printer.isConnected
+              onPressed: printer.isConnected || printer.type == PrinterType.network
                   ? () => provider.testPrint(printer.id)
                   : null,
               tooltip: 'Test Print',

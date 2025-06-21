@@ -254,12 +254,6 @@ class PrinterService {
           return success;
         } catch (e) {
           print('Network printer error: $e');
-          if (e.toString().contains('capabilities.length is already loaded')) {
-            print('Capabilities already loaded, trying alternative approach');
-            await Future.delayed(const Duration(seconds: 1));
-            return true;
-          }
-          
           if (!keepConnected) {
             try {
               networkPrinter.disconnect();
@@ -338,14 +332,13 @@ class PrinterService {
         return true;
       }
       
-      for (int i = 0; i < incompleteTasks.length; i++) {
-        final task = incompleteTasks[i];
+      List<int> allBytes = [];
+      for (final task in incompleteTasks) {
         final slipBytes = await _generateIndividualSlipBytes(task, hierarchyPath);
-        final isLastTask = i == incompleteTasks.length - 1;
-        final success = await printJob(printerId, slipBytes, keepConnected: !isLastTask);
-        if (!success) return false;
+        allBytes.addAll(slipBytes);
       }
-      return true;
+      
+      return await printJob(printerId, allBytes);
     } catch (e) {
       print('Error in print individual slips: $e');
       return false;
@@ -364,14 +357,13 @@ class PrinterService {
         return true;
       }
       
-      for (int i = 0; i < incompleteTasks.length; i++) {
-        final task = incompleteTasks[i];
+      List<int> allBytes = [];
+      for (final task in incompleteTasks) {
         final slipBytes = await _generateIndividualSlipWithSubtasksBytes(task, hierarchyPath);
-        final isLastTask = i == incompleteTasks.length - 1;
-        final success = await printJob(printerId, slipBytes, keepConnected: !isLastTask);
-        if (!success) return false;
+        allBytes.addAll(slipBytes);
       }
-      return true;
+      
+      return await printJob(printerId, allBytes);
     } catch (e) {
       print('Error in print individual slips with subtasks: $e');
       return false;
