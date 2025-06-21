@@ -163,13 +163,13 @@ class TaskTile extends StatelessWidget {
                 isDense: true,
                 contentPadding: EdgeInsets.symmetric(vertical: 8.0),
               ),
-              onSubmitted: (_) => onEditComplete?.call(),
-              onEditingComplete: onEditComplete,
+              onSubmitted: (value) => onEditComplete?.call(),
+              onEditingComplete: () => onEditComplete?.call(),
             ),
           ),
           IconButton(
             icon: const Icon(Icons.check),
-            onPressed: onEditComplete,
+            onPressed: () => onEditComplete?.call(),
           ),
         ],
       ),
@@ -243,10 +243,6 @@ class _AddTaskTileState extends State<AddTaskTile> {
     try {
       await widget.onAddTask(_controller.text.trim(), widget.parentId);
       _controller.clear();
-      // Refocus the text input for continuous adding
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _focusNode.requestFocus();
-      });
     } finally {
       setState(() {
         _isAdding = false;
