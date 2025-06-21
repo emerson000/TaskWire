@@ -4,6 +4,7 @@ import '../services/task_manager.dart';
 import '../services/printer_service.dart';
 import 'task_tile.dart';
 import 'print_menu.dart';
+import 'zero_state.dart';
 
 class DesktopColumnView extends StatefulWidget {
   final TaskManager taskManager;
@@ -22,6 +23,7 @@ class DesktopColumnView extends StatefulWidget {
   final int? addTaskColumnIndex;
   final VoidCallback onHideAddTask;
   final Function(Task?, int)? onColumnChange;
+  final int? refreshKey;
 
   const DesktopColumnView({
     super.key,
@@ -41,6 +43,7 @@ class DesktopColumnView extends StatefulWidget {
     this.addTaskColumnIndex,
     required this.onHideAddTask,
     this.onColumnChange,
+    this.refreshKey,
   });
 
   @override
@@ -50,6 +53,14 @@ class DesktopColumnView extends StatefulWidget {
 class _DesktopColumnViewState extends State<DesktopColumnView> {
   List<Task?> _columnHierarchy = [null];
   final ScrollController _scrollController = ScrollController();
+
+  @override
+  void didUpdateWidget(covariant DesktopColumnView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.refreshKey != oldWidget.refreshKey) {
+      setState(() {});
+    }
+  }
 
   @override
   void dispose() {
@@ -66,49 +77,33 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
   }
 
   Future<void> _navigateToSubtasks(Task parentTask) async {
-    final existingIndex = _columnHierarchy.indexOf(parentTask);
+    final existingIndex = _columnHierarchy.indexWhere((task) => task?.id == parentTask.id);
+
     if (existingIndex != -1) {
-      // Task already exists in hierarchy, trim to that point
-      setState(() {
-        _columnHierarchy = _columnHierarchy.sublist(0, existingIndex + 1);
-      });
-      widget.onColumnChange?.call(parentTask, existingIndex);
+      _columnHierarchy = _columnHierarchy.sublist(0, existingIndex + 1);
     } else {
-      // Check if this is a root-level task (parent is null)
-      if (parentTask.parentId == null) {
-        // Reset hierarchy for root-level tasks
-        setState(() {
-          _columnHierarchy = [null];
-        });
-      } else {
-        // For nested tasks, find the correct insertion point
-        // Remove any columns that are not ancestors of this task
-        List<Task?> newHierarchy = [null];
-        Task? currentTask = parentTask;
-        List<Task> ancestors = [];
-
-        // Build ancestor chain
-        while (currentTask != null) {
-          ancestors.insert(0, currentTask);
-          currentTask = currentTask.parentId != null
-              ? await widget.taskManager.findTaskById(currentTask.parentId!)
-              : null;
+      final newHierarchy = <Task?>[null];
+      
+      var currentTask = await widget.taskManager.findTaskById(parentTask.id);
+      final ancestors = <Task>[];
+      if (currentTask != null) {
+        while (currentTask?.parentId != null) {
+          final parent = await widget.taskManager.findTaskById(currentTask!.parentId!);
+          if (parent != null) {
+            ancestors.insert(0, parent);
+            currentTask = parent;
+          } else {
+            break;
+          }
         }
-
-        // Add ancestors to hierarchy (excluding the target task itself)
-        for (int i = 0; i < ancestors.length - 1; i++) {
-          newHierarchy.add(ancestors[i]);
-        }
-
-        setState(() {
-          _columnHierarchy = newHierarchy;
-        });
       }
-      setState(() {
-        _columnHierarchy.add(parentTask);
-      });
-      widget.onColumnChange?.call(parentTask, _columnHierarchy.length - 1);
+      newHierarchy.addAll(ancestors);
+      newHierarchy.add(parentTask);
+      _columnHierarchy = newHierarchy;
     }
+    
+    setState(() {});
+    widget.onColumnChange?.call(parentTask, _columnHierarchy.length - 1);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scrollController.animateTo(
@@ -449,46 +444,56 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                           ).colorScheme.primaryContainer.withOpacity(0.1)
                         : null,
                   ),
-                  child: ListView.builder(
-                    itemCount: tasks.length + (widget.showAddTask && widget.addTaskColumnIndex == columnIndex ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (widget.showAddTask && widget.addTaskColumnIndex == columnIndex && index == tasks.length) {
-                        return AddTaskTile(
-                          parentId: parent?.id?.toString(),
+                  child: tasks.isEmpty && !widget.showAddTask
+                      ? ZeroState(
                           parentTitle: parent?.title,
-                          onAddTask: widget.onCreateTask,
-                          onCancel: widget.onHideAddTask,
-                        );
-                      }
-                      
-                      final task = tasks[index];
-                      return DragTarget<Task>(
-                        onWillAccept: (data) =>
-                            data != null && data.id != task.id,
-                        onAccept: (draggedTask) =>
-                            _onTaskDrop(draggedTask, task),
-                        builder: (context, candidateData, rejectedData) {
-                          return TaskTile(
-                            key: ValueKey(task.id),
-                            task: task,
-                            isEditing: widget.editingTaskId == task.id,
-                            editController: widget.editController,
-                            onTap: () async => await _navigateToSubtasks(task),
-                            onEdit: () => widget.onStartEditing(task),
-                            onDelete: () => widget.onDeleteTask(task.id),
-                            onCheckboxChanged: (_) => widget.onUpdateTask(
-                              task.id,
-                              isCompleted: !task.isCompleted,
-                            ),
-                            onEditComplete: widget.onFinishEditing,
-                            isDragTarget: candidateData.isNotEmpty,
-                            onDragAccept: (draggedTask) =>
-                                _onTaskDrop(draggedTask, task),
-                          );
-                        },
-                      );
-                    },
-                  ),
+                          onAddTask: () => widget.onAddTask(
+                            parent?.id?.toString(),
+                            parent?.title,
+                            columnIndex: columnIndex,
+                          ),
+                          isDesktop: true,
+                        )
+                      : ListView.builder(
+                          itemCount: tasks.length + (widget.showAddTask && widget.addTaskColumnIndex == columnIndex ? 1 : 0),
+                          itemBuilder: (context, index) {
+                            if (widget.showAddTask && widget.addTaskColumnIndex == columnIndex && index == tasks.length) {
+                              return AddTaskTile(
+                                parentId: parent?.id?.toString(),
+                                parentTitle: parent?.title,
+                                onAddTask: widget.onCreateTask,
+                                onCancel: widget.onHideAddTask,
+                              );
+                            }
+                            
+                            final task = tasks[index];
+                            return DragTarget<Task>(
+                              onWillAccept: (data) =>
+                                  data != null && data.id != task.id,
+                              onAccept: (draggedTask) =>
+                                  _onTaskDrop(draggedTask, task),
+                              builder: (context, candidateData, rejectedData) {
+                                return TaskTile(
+                                  key: ValueKey(task.id),
+                                  task: task,
+                                  isEditing: widget.editingTaskId == task.id,
+                                  editController: widget.editController,
+                                  onTap: () async => await _navigateToSubtasks(task),
+                                  onEdit: () => widget.onStartEditing(task),
+                                  onDelete: () => widget.onDeleteTask(task.id),
+                                  onCheckboxChanged: (_) => widget.onUpdateTask(
+                                    task.id,
+                                    isCompleted: !task.isCompleted,
+                                  ),
+                                  onEditComplete: widget.onFinishEditing,
+                                  isDragTarget: candidateData.isNotEmpty,
+                                  onDragAccept: (draggedTask) =>
+                                      _onTaskDrop(draggedTask, task),
+                                );
+                              },
+                            );
+                          },
+                        ),
                 );
               },
             ),
@@ -500,7 +505,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
 
   Widget _buildColumnHeader(Task? parent, int columnIndex) {
     return Container(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         border: Border(
@@ -514,6 +519,8 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
               icon: const Icon(Icons.chevron_left),
               onPressed: () => _navigateToColumn(columnIndex - 1),
               tooltip: 'Go back',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
             ),
           Expanded(
             child: Row(
@@ -529,17 +536,17 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                 if (parent != null)
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 8.0,
-                      vertical: 4.0,
+                      horizontal: 6.0,
+                      vertical: 2.0,
                     ),
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(12.0),
+                      borderRadius: BorderRadius.circular(8.0),
                     ),
                     child: Text(
                       '${parent.subtaskCount}',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 11,
                         fontWeight: FontWeight.bold,
                         color: Theme.of(context).colorScheme.onPrimaryContainer,
                       ),
@@ -561,6 +568,8 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
             tooltip: parent != null
                 ? 'Add subtask to ${parent.title}'
                 : 'Add new task',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
           ),
         ],
       ),

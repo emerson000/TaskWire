@@ -6,6 +6,7 @@ import '../services/printer_service.dart';
 import 'task_tile.dart';
 import 'breadcrumb_navigation.dart';
 import 'print_menu.dart';
+import 'zero_state.dart';
 
 class MobileDrillDownView extends StatefulWidget {
   final TaskManager taskManager;
@@ -437,46 +438,56 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
                         return const Center(child: CircularProgressIndicator());
                       }
                       final tasks = snapshot.data!;
-                      return ListView.builder(
-                        itemCount: tasks.length + (widget.showAddTask && widget.addTaskParentId == _currentParent?.id?.toString() ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          if (widget.showAddTask && widget.addTaskParentId == _currentParent?.id?.toString() && index == tasks.length) {
-                            return AddTaskTile(
-                              parentId: _currentParent?.id?.toString(),
+                      return tasks.isEmpty && !widget.showAddTask
+                          ? ZeroState(
                               parentTitle: _currentParent?.title,
-                              onAddTask: widget.onCreateTask,
-                              onCancel: widget.onHideAddTask,
+                              onAddTask: () => widget.onAddTask(
+                                _currentParent?.id?.toString(),
+                                _currentParent?.title,
+                                columnIndex: null,
+                              ),
+                              isDesktop: false,
+                            )
+                          : ListView.builder(
+                              itemCount: tasks.length + (widget.showAddTask && widget.addTaskParentId == _currentParent?.id?.toString() ? 1 : 0),
+                              itemBuilder: (context, index) {
+                                if (widget.showAddTask && widget.addTaskParentId == _currentParent?.id?.toString() && index == tasks.length) {
+                                  return AddTaskTile(
+                                    parentId: _currentParent?.id?.toString(),
+                                    parentTitle: _currentParent?.title,
+                                    onAddTask: widget.onCreateTask,
+                                    onCancel: widget.onHideAddTask,
+                                  );
+                                }
+                                
+                                final task = tasks[index];
+                                return DragTarget<Task>(
+                                  onWillAccept: (data) =>
+                                      data != null && data.id != task.id,
+                                  onAccept: (draggedTask) =>
+                                      _onTaskDrop(draggedTask, task),
+                                  builder: (context, candidateData, rejectedData) {
+                                    return TaskTile(
+                                      key: ValueKey(task.id),
+                                      task: task,
+                                      isEditing: widget.editingTaskId == task.id,
+                                      editController: widget.editController,
+                                      onTap: () => _navigateToSubtasks(task),
+                                      onEdit: () => widget.onStartEditing(task),
+                                      onDelete: () => widget.onDeleteTask(task.id),
+                                      onCheckboxChanged: (_) => widget.onUpdateTask(
+                                        task.id,
+                                        isCompleted: !task.isCompleted,
+                                      ),
+                                      onEditComplete: widget.onFinishEditing,
+                                      isDragTarget: candidateData.isNotEmpty,
+                                      onDragAccept: (draggedTask) =>
+                                          _onTaskDrop(draggedTask, task),
+                                    );
+                                  },
+                                );
+                              },
                             );
-                          }
-                          
-                          final task = tasks[index];
-                          return DragTarget<Task>(
-                            onWillAccept: (data) =>
-                                data != null && data.id != task.id,
-                            onAccept: (draggedTask) =>
-                                _onTaskDrop(draggedTask, task),
-                            builder: (context, candidateData, rejectedData) {
-                              return TaskTile(
-                                key: ValueKey(task.id),
-                                task: task,
-                                isEditing: widget.editingTaskId == task.id,
-                                editController: widget.editController,
-                                onTap: () => _navigateToSubtasks(task),
-                                onEdit: () => widget.onStartEditing(task),
-                                onDelete: () => widget.onDeleteTask(task.id),
-                                onCheckboxChanged: (_) => widget.onUpdateTask(
-                                  task.id,
-                                  isCompleted: !task.isCompleted,
-                                ),
-                                onEditComplete: widget.onFinishEditing,
-                                isDragTarget: candidateData.isNotEmpty,
-                                onDragAccept: (draggedTask) =>
-                                    _onTaskDrop(draggedTask, task),
-                              );
-                            },
-                          );
-                        },
-                      );
                     },
                   ),
                 ),

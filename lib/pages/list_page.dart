@@ -54,7 +54,10 @@ class _ListPageState extends State<ListPage> {
   }
 
   Future<void> _addTask(String taskTitle, String? parentId) async {
-    if (taskTitle.trim().isEmpty) return;
+    if (taskTitle.trim().isEmpty) {
+      _hideAddTaskInline();
+      return;
+    }
 
     try {
       await _taskManager.createTask(
@@ -63,10 +66,10 @@ class _ListPageState extends State<ListPage> {
       );
       setState(() {
         _refreshCounter++;
-        if (_addTaskParentId != parentId) {
-          _addTaskParentId = parentId;
-          _addTaskParentTitle = null;
-        }
+        _showAddTask = false;
+        _addTaskParentId = null;
+        _addTaskParentTitle = null;
+        _addTaskColumnIndex = null;
       });
     } catch (e) {
       if (kDebugMode) {
@@ -198,6 +201,7 @@ class _ListPageState extends State<ListPage> {
       addTaskColumnIndex: _addTaskColumnIndex,
       onHideAddTask: _hideAddTaskInline,
       onColumnChange: _updateCurrentColumn,
+      refreshKey: _refreshCounter,
     );
   }
 
