@@ -444,7 +444,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                           ).colorScheme.primaryContainer.withOpacity(0.1)
                         : null,
                   ),
-                  child: tasks.isEmpty && !widget.showAddTask
+                  child: tasks.isEmpty && !(widget.showAddTask && widget.addTaskColumnIndex == columnIndex)
                       ? ZeroState(
                           parentTitle: parent?.title,
                           onAddTask: () => widget.onAddTask(

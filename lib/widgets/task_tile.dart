@@ -243,6 +243,7 @@ class _AddTaskTileState extends State<AddTaskTile> {
     try {
       await widget.onAddTask(_controller.text.trim(), widget.parentId);
       _controller.clear();
+      _focusNode.requestFocus();
     } finally {
       setState(() {
         _isAdding = false;

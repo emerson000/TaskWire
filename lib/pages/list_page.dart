@@ -66,10 +66,6 @@ class _ListPageState extends State<ListPage> {
       );
       setState(() {
         _refreshCounter++;
-        _showAddTask = false;
-        _addTaskParentId = null;
-        _addTaskParentTitle = null;
-        _addTaskColumnIndex = null;
       });
     } catch (e) {
       if (kDebugMode) {

@@ -438,7 +438,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
                         return const Center(child: CircularProgressIndicator());
                       }
                       final tasks = snapshot.data!;
-                      return tasks.isEmpty && !widget.showAddTask
+                      return tasks.isEmpty && !(widget.showAddTask && widget.addTaskParentId == _currentParent?.id?.toString())
                           ? ZeroState(
                               parentTitle: _currentParent?.title,
                               onAddTask: () => widget.onAddTask(
