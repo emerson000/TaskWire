@@ -21,6 +21,7 @@ class DesktopColumnView extends StatefulWidget {
   final String? addTaskParentTitle;
   final int? addTaskColumnIndex;
   final VoidCallback onHideAddTask;
+  final Function(Task?, int)? onColumnChange;
 
   const DesktopColumnView({
     super.key,
@@ -39,6 +40,7 @@ class DesktopColumnView extends StatefulWidget {
     this.addTaskParentTitle,
     this.addTaskColumnIndex,
     required this.onHideAddTask,
+    this.onColumnChange,
   });
 
   @override
@@ -55,6 +57,14 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
     super.dispose();
   }
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      widget.onColumnChange?.call(null, 0);
+    });
+  }
+
   Future<void> _navigateToSubtasks(Task parentTask) async {
     final existingIndex = _columnHierarchy.indexOf(parentTask);
     if (existingIndex != -1) {
@@ -62,6 +72,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
       setState(() {
         _columnHierarchy = _columnHierarchy.sublist(0, existingIndex + 1);
       });
+      widget.onColumnChange?.call(parentTask, existingIndex);
     } else {
       // Check if this is a root-level task (parent is null)
       if (parentTask.parentId == null) {
@@ -96,6 +107,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
       setState(() {
         _columnHierarchy.add(parentTask);
       });
+      widget.onColumnChange?.call(parentTask, _columnHierarchy.length - 1);
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -111,6 +123,8 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
     setState(() {
       _columnHierarchy = _columnHierarchy.sublist(0, columnIndex + 1);
     });
+    final currentParent = _columnHierarchy[columnIndex];
+    widget.onColumnChange?.call(currentParent, columnIndex);
   }
 
   Future<void> _printColumn(Task? parent) async {

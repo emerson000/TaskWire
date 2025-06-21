@@ -28,6 +28,8 @@ class _ListPageState extends State<ListPage> {
   String? _addTaskParentTitle;
   int? _addTaskColumnIndex;
   int _refreshCounter = 0;
+  Task? _currentParent;
+  int _currentColumnIndex = 0;
 
   static const double _desktopBreakpoint = 800.0;
 
@@ -88,6 +90,13 @@ class _ListPageState extends State<ListPage> {
       _addTaskParentId = null;
       _addTaskParentTitle = null;
       _addTaskColumnIndex = null;
+    });
+  }
+
+  void _updateCurrentColumn(Task? parent, int columnIndex) {
+    setState(() {
+      _currentParent = parent;
+      _currentColumnIndex = columnIndex;
     });
   }
 
@@ -163,7 +172,7 @@ class _ListPageState extends State<ListPage> {
       body: isDesktop ? _buildDesktopView() : _buildMobileView(),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          _showAddTaskInline(null, null);
+          _showAddTaskInline(_currentParent?.id?.toString(), _currentParent?.title, columnIndex: _currentColumnIndex);
         },
         tooltip: 'Add Task',
         child: const Icon(Icons.add),
@@ -188,6 +197,7 @@ class _ListPageState extends State<ListPage> {
       addTaskParentTitle: _addTaskParentTitle,
       addTaskColumnIndex: _addTaskColumnIndex,
       onHideAddTask: _hideAddTaskInline,
+      onColumnChange: _updateCurrentColumn,
     );
   }
 
@@ -208,6 +218,7 @@ class _ListPageState extends State<ListPage> {
       addTaskParentId: _addTaskParentId,
       addTaskParentTitle: _addTaskParentTitle,
       refreshKey: _refreshCounter,
+      onParentChange: _updateCurrentColumn,
     );
   }
 }

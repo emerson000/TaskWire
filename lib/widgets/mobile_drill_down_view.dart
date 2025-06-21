@@ -24,6 +24,7 @@ class MobileDrillDownView extends StatefulWidget {
   final String? addTaskParentTitle;
   final VoidCallback? onRefresh;
   final int? refreshKey;
+  final Function(Task?, int)? onParentChange;
 
   const MobileDrillDownView({
     super.key,
@@ -43,6 +44,7 @@ class MobileDrillDownView extends StatefulWidget {
     this.addTaskParentTitle,
     this.onRefresh,
     this.refreshKey,
+    this.onParentChange,
   });
 
   @override
@@ -247,6 +249,9 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
   void initState() {
     super.initState();
     _refreshTasks();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      widget.onParentChange?.call(null, 0);
+    });
   }
 
   @override
@@ -267,6 +272,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
       _breadcrumbs.add(parentTask);
       _refreshTasks();
     });
+    widget.onParentChange?.call(parentTask, _breadcrumbs.length - 1);
   }
 
   void _navigateUp(Task? targetParent) {
@@ -279,6 +285,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
       }
       _refreshTasks();
     });
+    widget.onParentChange?.call(targetParent, targetParent != null ? _breadcrumbs.indexOf(targetParent) : 0);
   }
 
   void _onTaskDrop(Task draggedTask, Task targetTask) async {
