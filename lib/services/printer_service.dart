@@ -250,7 +250,7 @@ class PrinterService {
             printer.isConnected = false;
             await _repository.updatePrinter(printer);
           }
-          
+          await Future.delayed(const Duration(seconds: 1));
           return success;
         } catch (e) {
           print('Network printer error: $e');
