@@ -523,36 +523,38 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
               constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
             ),
           Expanded(
-            child: Row(
-              spacing: 8.0,
-              children: [
-                Text(
-                  parent?.title ?? 'All Tasks',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                spacing: 8.0,
+                children: [
+                  Text(
+                    parent?.title ?? 'All Tasks',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                if (parent != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6.0,
-                      vertical: 2.0,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(8.0),
-                    ),
-                    child: Text(
-                      '${parent.subtaskCount}',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  if (parent != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6.0,
+                        vertical: 2.0,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(8.0),
+                      ),
+                      child: Text(
+                        '${parent.subtaskCount}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.onPrimaryContainer,
+                        ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
           PrintMenu(
