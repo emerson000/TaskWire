@@ -85,33 +85,13 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
   int _selectedIndex = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
-    });
-  }
 
   Widget _buildBody() {
     switch (_selectedIndex) {
       case 0:
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              const Text('You have pushed the button this many times:'),
-              Text(
-                '$_counter',
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
-            ],
-          ),
-        );
-      case 1:
         return const ListPage();
-      case 2:
+      case 1:
         return const PrinterSettingsPage();
       default:
         return const Center(child: Text('Unknown Page'));
@@ -147,11 +127,11 @@ class _MyHomePageState extends State<MyHomePage> {
         children: [
           NavigationDrawerDestination(
             icon: Icon(
-              Icons.home,
+              Icons.list,
               color: _selectedIndex == 0 ? Colors.deepPurple : null,
             ),
             label: Text(
-              'Home',
+              'Tasks',
               style: TextStyle(
                 color: _selectedIndex == 0 ? Colors.deepPurple : null,
               ),
@@ -159,38 +139,19 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
           NavigationDrawerDestination(
             icon: Icon(
-              Icons.list,
-              color: _selectedIndex == 1 ? Colors.deepPurple : null,
-            ),
-            label: Text(
-              'Lists',
-              style: TextStyle(
-                color: _selectedIndex == 1 ? Colors.deepPurple : null,
-              ),
-            ),
-          ),
-          NavigationDrawerDestination(
-            icon: Icon(
               Icons.print,
-              color: _selectedIndex == 2 ? Colors.deepPurple : null,
+              color: _selectedIndex == 1 ? Colors.deepPurple : null,
             ),
             label: Text(
               'Print Settings',
               style: TextStyle(
-                color: _selectedIndex == 2 ? Colors.deepPurple : null,
+                color: _selectedIndex == 1 ? Colors.deepPurple : null,
               ),
             ),
           ),
         ],
       ),
       body: _buildBody(),
-      floatingActionButton: _selectedIndex == 0
-          ? FloatingActionButton(
-              onPressed: _incrementCounter,
-              tooltip: 'Increment',
-              child: const Icon(Icons.add),
-            )
-          : null,
     );
   }
 }
