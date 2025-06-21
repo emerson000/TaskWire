@@ -393,15 +393,8 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
                   vertical: 8.0,
                 ),
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    Expanded(
-                      child: Text(
-                        _currentParent != null
-                            ? 'Subtasks of "${_currentParent!.title}"'
-                            : 'All Tasks',
-                        style: Theme.of(context).textTheme.titleSmall,
-                      ),
-                    ),
                     PrintMenu(
                       onPrintLevel: _printCurrentLevel,
                       onPrintWithSubtasks: _printCurrentLevelWithSubtasks,
