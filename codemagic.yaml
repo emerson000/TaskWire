@@ -85,7 +85,7 @@ workflows:
             ./build_msi.bat
         - name: Publish to GitHub
           script: |
-            gh release create "${CM_TAG}" --title "TaskWire ${CM_TAG}" --notes "TaskWire Windows release ${CM_TAG}" || true
+            gh release create "${CM_TAG}" --title "TaskWire ${CM_TAG}" --notes "TaskWire Windows release ${CM_TAG}"
             gh release upload "${CM_TAG}" windows/installer/TaskWire.msi
       artifacts:
         - windows/installer/TaskWire.msi
