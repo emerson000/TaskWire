@@ -1,68 +1,39 @@
 # TaskWire
 
-A Flutter task management application with Drift database persistence.
+A cross-platform to-do app with integrated thermal printer support. TaskWire allows you to create, organize, and print checklists and task slips directly to thermal printers. 
+
+> **Inspiration**: This project was inspired by [Laurie Hérault's article](https://www.laurieherault.com/articles/a-thermal-receipt-printer-cured-my-procrastination) about using thermal receipt printers to boost productivity and overcome procrastination through tangible task management.
 
 ## Features
 
-- **Hierarchical Tasks**: Create tasks with unlimited nested subtasks
-- **Persistent Storage**: Uses Drift (SQLite) for reliable data persistence
-- **Task Management**: Create, update, delete, and mark tasks as complete
-- **Task Organization**: Move tasks between parents and reorder them
+- **Task Management**: Create, edit, and organize tasks with hierarchical subtask support
+- **Cross-Platform**: Available on Windows, iOS, and Android
+- **Thermal Printing**: Direct printing to USB and network thermal printers
+- **Responsive Design**: Adaptive UI that works on desktop and mobile devices
+- **Local Storage**: SQLite database for reliable offline task management
+- **Modern UI**: Clean, intuitive interface with Material Design 3
 
-## Architecture
+## Printer Support
 
-The application follows a clean architecture pattern with:
+TaskWire supports ESC/POS thermal printers across different platforms with the following connectivity options:
 
-- **Models**: Domain models representing tasks (`lib/models/task.dart`)
-- **Database**: Drift database setup and table definitions (`lib/database/database.dart`)
-- **Repository**: Data access layer bridging domain models and database (`lib/repositories/task_repository.dart`)
-- **Service**: Business logic layer (`lib/services/task_manager.dart`)
-- **UI**: Flutter widgets for the user interface (`lib/main.dart`)
+| Platform | USB | Network | Bluetooth |
+|----------|-----|---------|-----------|
+| **Windows** | ✅ | ✅ | 🔄 Planned |
+| **iOS** | ❌ | ✅ | 🔄 Planned |
+| **Android** | ✅ | ✅ | 🔄 Planned |
+| **macOS** | 🔄 Planned | 🔄 Planned | 🔄 Planned |
 
-## Database Structure
-
-The application uses a single `tasks` table with the following structure:
-
-```sql
-CREATE TABLE tasks (
-  id TEXT PRIMARY KEY,
-  title TEXT NOT NULL,
-  is_completed BOOLEAN DEFAULT FALSE,
-  parent_id TEXT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-```
+Most Epson ESC/POS should work, however, more testing is needed to confirm compatiblity with various thermal printers.
 
 ## Getting Started
 
-1. Install dependencies:
-   ```bash
-   flutter pub get
-   ```
+**Prerequisites**
+- Flutter SDK
+- Dart SDK
 
-2. Generate Drift code:
-   ```bash
-   dart run build_runner build
-   ```
-
-3. Run the application:
-   ```bash
-   flutter run
-   ```
-
-## Key Dependencies
-
-- `drift: ^2.27.0` - Type-safe database access layer
-- `sqlite3_flutter_libs: ^0.5.0` - SQLite3 native libraries
-- `path_provider: ^2.1.4` - Access to commonly used locations on the filesystem
-- `path: ^1.9.0` - Path manipulation utilities
-
-## Sample Data
-
-The application includes sample data with three main task categories:
-- Plan vacation (with nested accommodation options)
-- Work project (with testing phases)
-- Personal goals (with learning objectives)
-
-This data is automatically loaded when the app runs for the first time.
+```bash
+git clone https://github.com/emerson000/taskwire.git
+cd taskwire
+flutter run
+```
