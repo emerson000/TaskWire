@@ -66,6 +66,8 @@ workflows:
         flutter: stable
         groups:
           - default
+        vars:
+          CM_TAG: $CM_TAG
       cache:
         cache_paths:
           - ~/.pub-cache
@@ -85,8 +87,12 @@ workflows:
             ./build_msi.bat
         - name: Publish to GitHub
           script: |
-            gh release create "${CM_TAG}" --title "TaskWire ${CM_TAG}" --notes "TaskWire Windows release ${CM_TAG}"
-            gh release upload "${CM_TAG}" windows/installer/TaskWire.msi
+            if ([string]::IsNullOrEmpty($env:CM_TAG)) {
+              Write-Host "Error: CM_TAG is empty"
+              exit 0
+            }
+            gh release create "$env:CM_TAG" --title "TaskWire $env:CM_TAG" --notes "TaskWire Windows release $env:CM_TAG"
+            gh release upload "$env:CM_TAG" windows/installer/TaskWire.msi
       artifacts:
         - windows/installer/TaskWire.msi
       triggering:
