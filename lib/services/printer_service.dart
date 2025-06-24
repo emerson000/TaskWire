@@ -10,12 +10,7 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_usb_printer/flutter_usb_printer.dart';
 
-enum PrintErrorType {
-  noPrinters,
-  cancelled,
-  printFailed,
-  exception,
-}
+enum PrintErrorType { noPrinters, cancelled, printFailed, exception }
 
 class PrintResult {
   final bool success;
@@ -165,15 +160,15 @@ class PrinterService {
         }
 
         PrinterNetworkManager? networkPrinter = _networkPrinters[printerId];
-        
+
         if (networkPrinter == null) {
           networkPrinter = PrinterNetworkManager(printer.address);
           _networkPrinters[printerId] = networkPrinter;
         }
-        
+
         try {
           final connectResult = await networkPrinter.connect();
-          
+
           if (connectResult == PosPrintResult.success) {
             printer.isConnected = true;
             await _repository.updatePrinter(printer);
@@ -204,7 +199,11 @@ class PrinterService {
     }
   }
 
-  Future<bool> printJob(String printerId, List<int> bytes, {bool keepConnected = false}) async {
+  Future<bool> printJob(
+    String printerId,
+    List<int> bytes, {
+    bool keepConnected = false,
+  }) async {
     try {
       final printers = await _repository.getPrinters();
       final printer = printers.firstWhere((p) => p.id == printerId);
@@ -250,7 +249,7 @@ class PrinterService {
         try {
           final printResult = await networkPrinter.printTicket(bytes);
           final success = printResult == PosPrintResult.success;
-          
+
           if (success && !keepConnected) {
             networkPrinter.disconnect();
             _networkPrinters.remove(printerId);
@@ -271,7 +270,7 @@ class PrinterService {
               print('Error disconnecting after print: $disconnectError');
             }
           }
-          
+
           await Future.delayed(const Duration(seconds: 2));
           return true;
         }
@@ -334,17 +333,20 @@ class PrinterService {
   }) async {
     try {
       final incompleteTasks = tasks.where((task) => !task.isCompleted).toList();
-      
+
       if (incompleteTasks.isEmpty) {
         return true;
       }
-      
+
       List<int> allBytes = [];
       for (final task in incompleteTasks) {
-        final slipBytes = await _generateIndividualSlipBytes(task, hierarchyPath);
+        final slipBytes = await _generateIndividualSlipBytes(
+          task,
+          hierarchyPath,
+        );
         allBytes.addAll(slipBytes);
       }
-      
+
       return await printJob(printerId, allBytes);
     } catch (e) {
       print('Error in print individual slips: $e');
@@ -359,17 +361,20 @@ class PrinterService {
   }) async {
     try {
       final incompleteTasks = tasks.where((task) => !task.isCompleted).toList();
-      
+
       if (incompleteTasks.isEmpty) {
         return true;
       }
-      
+
       List<int> allBytes = [];
       for (final task in incompleteTasks) {
-        final slipBytes = await _generateIndividualSlipWithSubtasksBytes(task, hierarchyPath);
+        final slipBytes = await _generateIndividualSlipWithSubtasksBytes(
+          task,
+          hierarchyPath,
+        );
         allBytes.addAll(slipBytes);
       }
-      
+
       return await printJob(printerId, allBytes);
     } catch (e) {
       print('Error in print individual slips with subtasks: $e');
@@ -403,27 +408,16 @@ class PrinterService {
       ),
     );
 
-    bytes += generator.text(
-      'Tasks: ${tasks.length}',
-      styles: PosStyles(
-        height: PosTextSize.size1,
-        width: PosTextSize.size1,
-        align: PosAlign.center,
-      ),
-    );
-
-    bytes += generator.hr(len: 42);
-
-    if (tasks.isEmpty) {
+    if (tasks.isNotEmpty) {
       bytes += generator.text(
-        'No tasks in this column',
+        'Tasks: ${tasks.length}',
         styles: PosStyles(
           height: PosTextSize.size1,
           width: PosTextSize.size1,
           align: PosAlign.center,
         ),
       );
-    } else {
+      bytes += generator.hr(len: 42);
       for (int i = 0; i < tasks.length; i++) {
         final task = tasks[i];
 
@@ -513,27 +507,16 @@ class PrinterService {
       ),
     );
 
-    bytes += generator.text(
-      'Tasks: ${tasks.length}',
-      styles: PosStyles(
-        height: PosTextSize.size1,
-        width: PosTextSize.size1,
-        align: PosAlign.center,
-      ),
-    );
-
-    bytes += generator.hr(len: 42);
-
-    if (tasks.isEmpty) {
+    if (tasks.isNotEmpty) {
       bytes += generator.text(
-        'No tasks in this column',
+        'Tasks: ${tasks.length}',
         styles: PosStyles(
           height: PosTextSize.size1,
           width: PosTextSize.size1,
           align: PosAlign.center,
         ),
       );
-    } else {
+      bytes += generator.hr(len: 42);
       for (int i = 0; i < tasks.length; i++) {
         final task = tasks[i];
 
@@ -661,43 +644,73 @@ class PrinterService {
       switch (printType) {
         case 'checklist':
           success = includeSubtasks
-              ? await printColumnWithSubtasks(selectedPrinterId!, tasks, columnTitle: levelTitle)
-              : await printColumn(selectedPrinterId!, tasks, columnTitle: levelTitle);
+              ? await printColumnWithSubtasks(
+                  selectedPrinterId!,
+                  tasks,
+                  columnTitle: levelTitle,
+                )
+              : await printColumn(
+                  selectedPrinterId!,
+                  tasks,
+                  columnTitle: levelTitle,
+                );
           break;
         case 'individual_slips':
           success = includeSubtasks
-              ? await printIndividualSlipsWithSubtasks(selectedPrinterId!, tasks, hierarchyPath: levelTitle)
-              : await printIndividualSlips(selectedPrinterId!, tasks, hierarchyPath: levelTitle);
+              ? await printIndividualSlipsWithSubtasks(
+                  selectedPrinterId!,
+                  tasks,
+                  hierarchyPath: levelTitle,
+                )
+              : await printIndividualSlips(
+                  selectedPrinterId!,
+                  tasks,
+                  hierarchyPath: levelTitle,
+                );
           break;
         default:
           success = includeSubtasks
-              ? await printColumnWithSubtasks(selectedPrinterId!, tasks, columnTitle: levelTitle)
-              : await printColumn(selectedPrinterId!, tasks, columnTitle: levelTitle);
+              ? await printColumnWithSubtasks(
+                  selectedPrinterId!,
+                  tasks,
+                  columnTitle: levelTitle,
+                )
+              : await printColumn(
+                  selectedPrinterId!,
+                  tasks,
+                  columnTitle: levelTitle,
+                );
       }
 
       if (success) {
         final actionText = includeSubtasks ? 'with subtasks' : '';
-        final typeText = printType == 'individual_slips' ? 'individual slips' : 'checklist';
-        
+        final typeText = printType == 'individual_slips'
+            ? 'individual slips'
+            : 'checklist';
+
         String successMessage;
         if (printType == 'individual_slips') {
-          final incompleteCount = tasks.where((task) => !task.isCompleted).length;
+          final incompleteCount = tasks
+              .where((task) => !task.isCompleted)
+              .length;
           if (incompleteCount == 0) {
-            successMessage = 'No incomplete tasks to print for level "$levelTitle"';
+            successMessage =
+                'No incomplete tasks to print for level "$levelTitle"';
           } else {
-            successMessage = '$incompleteCount incomplete task${incompleteCount == 1 ? '' : 's'} from level "$levelTitle" printed as $typeText successfully';
+            successMessage =
+                '$incompleteCount incomplete task${incompleteCount == 1 ? '' : 's'} from level "$levelTitle" printed as $typeText successfully';
           }
         } else {
-          successMessage = 'Level "$levelTitle" $actionText printed as $typeText successfully';
+          successMessage =
+              'Level "$levelTitle" $actionText printed as $typeText successfully';
         }
-        
-        return PrintResult(
-          success: true,
-          successMessage: successMessage,
-        );
+
+        return PrintResult(success: true, successMessage: successMessage);
       } else {
         final actionText = includeSubtasks ? 'with subtasks' : '';
-        final typeText = printType == 'individual_slips' ? 'individual slips' : 'checklist';
+        final typeText = printType == 'individual_slips'
+            ? 'individual slips'
+            : 'checklist';
         return PrintResult(
           success: false,
           errorMessage: 'Failed to print level $actionText as $typeText',
@@ -706,7 +719,9 @@ class PrinterService {
       }
     } catch (e) {
       final actionText = includeSubtasks ? 'with subtasks' : '';
-      final typeText = printType == 'individual_slips' ? 'individual slips' : 'checklist';
+      final typeText = printType == 'individual_slips'
+          ? 'individual slips'
+          : 'checklist';
       return PrintResult(
         success: false,
         errorMessage: 'Error printing level $actionText as $typeText: $e',
@@ -870,10 +885,7 @@ class PrinterService {
       final indent = '  ' * level;
       bytes += generator.text(
         '$indent[${subtask.isCompleted ? 'X' : ' '}] ${subtask.title}',
-        styles: PosStyles(
-          height: PosTextSize.size1,
-          width: PosTextSize.size1,
-        ),
+        styles: PosStyles(height: PosTextSize.size1, width: PosTextSize.size1),
       );
 
       if (subtask.subtaskCount > 0) {
@@ -891,7 +903,7 @@ class PrinterService {
     try {
       final parts = ipAddress.split('.');
       if (parts.length != 4) return false;
-      
+
       for (final part in parts) {
         final num = int.tryParse(part);
         if (num == null || num < 0 || num > 255) return false;
@@ -902,7 +914,9 @@ class PrinterService {
     }
   }
 
-  List<int> _wrapTextForSize2(Generator generator, String text, {
+  List<int> _wrapTextForSize2(
+    Generator generator,
+    String text, {
     PosAlign align = PosAlign.left,
     bool bold = false,
   }) {
