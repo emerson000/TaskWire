@@ -13,6 +13,7 @@ class DesktopColumnView extends StatefulWidget {
   final Function(int) onDeleteTask;
   final Function(Task) onStartEditing;
   final Function() onFinishEditing;
+  final VoidCallback? onEditCancel;
   final int? editingTaskId;
   final TextEditingController editController;
   final Function(String?, String?, {int? columnIndex}) onAddTask;
@@ -33,6 +34,7 @@ class DesktopColumnView extends StatefulWidget {
     required this.onDeleteTask,
     required this.onStartEditing,
     required this.onFinishEditing,
+    this.onEditCancel,
     this.editingTaskId,
     required this.editController,
     required this.onAddTask,
@@ -486,6 +488,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                                     isCompleted: !task.isCompleted,
                                   ),
                                   onEditComplete: widget.onFinishEditing,
+                                  onEditCancel: widget.onEditCancel,
                                   isDragTarget: candidateData.isNotEmpty,
                                   onDragAccept: (draggedTask) =>
                                       _onTaskDrop(draggedTask, task),

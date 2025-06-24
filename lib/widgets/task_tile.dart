@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import '../models/task.dart';
 
 class TaskTile extends StatelessWidget {
@@ -11,6 +12,7 @@ class TaskTile extends StatelessWidget {
   final VoidCallback? onDelete;
   final Function(bool?)? onCheckboxChanged;
   final VoidCallback? onEditComplete;
+  final VoidCallback? onEditCancel;
   final bool isDragTarget;
   final Function(Task)? onDragAccept;
 
@@ -24,6 +26,7 @@ class TaskTile extends StatelessWidget {
     this.onDelete,
     this.onCheckboxChanged,
     this.onEditComplete,
+    this.onEditCancel,
     this.isDragTarget = false,
     this.onDragAccept,
   });
@@ -173,33 +176,47 @@ class TaskTile extends StatelessWidget {
   }
 
   Widget _buildEditingTile(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: Row(
-        children: [
-          Checkbox(
-            value: task.isCompleted,
-            onChanged: onCheckboxChanged,
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: TextField(
-              controller: editController,
-              autofocus: true,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(
-                isDense: true,
-                contentPadding: EdgeInsets.symmetric(vertical: 8.0),
-              ),
-              onSubmitted: (value) => onEditComplete?.call(),
-              onEditingComplete: () => onEditComplete?.call(),
+    void handleKeyEvent(RawKeyEvent event) {
+      if (event is RawKeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
+        onEditCancel?.call();
+      }
+    }
+
+    return RawKeyboardListener(
+      focusNode: FocusNode(),
+      onKey: handleKeyEvent,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        child: Row(
+          children: [
+            Checkbox(
+              value: task.isCompleted,
+              onChanged: onCheckboxChanged,
             ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.check),
-            onPressed: () => onEditComplete?.call(),
-          ),
-        ],
+            const SizedBox(width: 16),
+            Expanded(
+              child: TextField(
+                controller: editController,
+                autofocus: true,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: const InputDecoration(
+                  isDense: true,
+                  contentPadding: EdgeInsets.symmetric(vertical: 8.0),
+                ),
+                onSubmitted: (value) => onEditComplete?.call(),
+                onEditingComplete: () => onEditComplete?.call(),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.check),
+              onPressed: () => onEditComplete?.call(),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () => onEditCancel?.call(),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -284,52 +301,68 @@ class _AddTaskTileState extends State<AddTaskTile> {
     widget.onCancel?.call();
   }
 
+  void _handleKeyEvent(RawKeyEvent event) {
+    if (event is RawKeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
+      _cancel();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: Row(
-        children: [
-          Icon(
-            Icons.add_circle_outline,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: TextField(
-              controller: _controller,
-              focusNode: _focusNode,
-              autofocus: true,
-              enabled: !_isAdding,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: InputDecoration(
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 8.0),
-                hintText: widget.parentTitle != null
-                    ? 'Add subtask'
-                    : 'Add new task',
-                border: InputBorder.none,
+    return RawKeyboardListener(
+      focusNode: FocusNode(),
+      onKey: _handleKeyEvent,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        child: Row(
+          children: [
+            Icon(
+              Icons.add_circle_outline,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: TextField(
+                controller: _controller,
+                focusNode: _focusNode,
+                autofocus: true,
+                enabled: !_isAdding,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: InputDecoration(
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 8.0),
+                  hintText: widget.parentTitle != null
+                      ? 'Add subtask'
+                      : 'Add new task',
+                  border: InputBorder.none,
+                ),
+                onSubmitted: (value) {
+                  if (value.trim().isEmpty) {
+                    _cancel();
+                  } else {
+                    _submitTask();
+                  }
+                },
               ),
-              onSubmitted: (_) => _submitTask(),
             ),
-          ),
-          if (_isAdding)
-            const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          else ...[
-            IconButton(
-              icon: const Icon(Icons.check),
-              onPressed: _submitTask,
-            ),
-            IconButton(
-              icon: const Icon(Icons.close),
-              onPressed: _cancel,
-            ),
+            if (_isAdding)
+              const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            else ...[
+              IconButton(
+                icon: const Icon(Icons.check),
+                onPressed: _submitTask,
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: _cancel,
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

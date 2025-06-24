@@ -148,6 +148,12 @@ class _ListPageState extends State<ListPage> {
     });
   }
 
+  void _cancelEditing() {
+    setState(() {
+      _editingTaskId = null;
+    });
+  }
+
   Future<void> _updateTask(
     int taskId, {
     String? title,
@@ -187,6 +193,7 @@ class _ListPageState extends State<ListPage> {
       onDeleteTask: _deleteTask,
       onStartEditing: _startEditing,
       onFinishEditing: _finishEditing,
+      onEditCancel: _cancelEditing,
       editingTaskId: _editingTaskId,
       editController: _editController,
       onAddTask: _showAddTaskInline,
@@ -209,6 +216,7 @@ class _ListPageState extends State<ListPage> {
       onDeleteTask: _deleteTask,
       onStartEditing: _startEditing,
       onFinishEditing: _finishEditing,
+      onEditCancel: _cancelEditing,
       editingTaskId: _editingTaskId,
       editController: _editController,
       onAddTask: _showAddTaskInline,

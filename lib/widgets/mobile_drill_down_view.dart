@@ -15,6 +15,7 @@ class MobileDrillDownView extends StatefulWidget {
   final Function(int) onDeleteTask;
   final Function(Task) onStartEditing;
   final Function() onFinishEditing;
+  final VoidCallback? onEditCancel;
   final int? editingTaskId;
   final TextEditingController editController;
   final Function(String?, String?, {int? columnIndex}) onAddTask;
@@ -35,6 +36,7 @@ class MobileDrillDownView extends StatefulWidget {
     required this.onDeleteTask,
     required this.onStartEditing,
     required this.onFinishEditing,
+    this.onEditCancel,
     this.editingTaskId,
     required this.editController,
     required this.onAddTask,
@@ -473,6 +475,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
                                         isCompleted: !task.isCompleted,
                                       ),
                                       onEditComplete: widget.onFinishEditing,
+                                      onEditCancel: widget.onEditCancel,
                                       isDragTarget: candidateData.isNotEmpty,
                                       onDragAccept: (draggedTask) =>
                                           _onTaskDrop(draggedTask, task),
