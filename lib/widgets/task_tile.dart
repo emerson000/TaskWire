@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../models/task.dart';
 
 class TaskTile extends StatelessWidget {
@@ -33,68 +34,95 @@ class TaskTile extends StatelessWidget {
       return _buildEditingTile(context);
     }
 
-    return LongPressDraggable<Task>(
-      data: task,
-      feedback: Material(
-        elevation: 4.0,
-        child: Container(
-          width: MediaQuery.of(context).size.width * 0.8,
-          padding: const EdgeInsets.all(16.0),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(8.0),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                task.isCompleted
-                    ? Icons.check_box
-                    : Icons.check_box_outline_blank,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Text(
-                  task.title,
-                  style: TextStyle(
-                    decoration:
-                        task.isCompleted ? TextDecoration.lineThrough : null,
-                  ),
+    return _buildDraggableWidget(context);
+  }
+
+  Widget _buildDraggableWidget(BuildContext context) {
+    final isWindows = defaultTargetPlatform == TargetPlatform.windows;
+    
+    if (isWindows) {
+      return Draggable<Task>(
+        data: task,
+        feedback: _buildDragFeedback(context),
+        childWhenDragging: _buildChildWhenDragging(context),
+        child: _buildDragTarget(context),
+      );
+    } else {
+      return LongPressDraggable<Task>(
+        data: task,
+        feedback: _buildDragFeedback(context),
+        childWhenDragging: _buildChildWhenDragging(context),
+        child: _buildDragTarget(context),
+      );
+    }
+  }
+
+  Widget _buildDragFeedback(BuildContext context) {
+    return Material(
+      elevation: 4.0,
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.8,
+        padding: const EdgeInsets.all(16.0),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(8.0),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              task.isCompleted
+                  ? Icons.check_box
+                  : Icons.check_box_outline_blank,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                task.title,
+                style: TextStyle(
+                  decoration:
+                      task.isCompleted ? TextDecoration.lineThrough : null,
                 ),
               ),
-              if (task.hasSubtasks) ...[
-                const SizedBox(width: 8),
-                _buildSubtaskIndicator(context),
-              ],
+            ),
+            if (task.hasSubtasks) ...[
+              const SizedBox(width: 8),
+              _buildSubtaskIndicator(context),
             ],
-          ),
+          ],
         ),
       ),
-      childWhenDragging: Opacity(
-        opacity: 0.5,
-        child: _buildNormalTile(context),
-      ),
-      child: DragTarget<Task>(
-        onWillAccept: (data) => data != null && data.id != task.id,
-        onAccept: (draggedTask) {
-          onDragAccept?.call(draggedTask);
-        },
-        builder: (context, candidateData, rejectedData) {
-          return AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            decoration: BoxDecoration(
-              color: candidateData.isNotEmpty
-                  ? Theme.of(context)
-                      .colorScheme
-                      .primaryContainer
-                      .withOpacity(0.3)
-                  : null,
-              borderRadius: BorderRadius.circular(8.0),
-            ),
-            child: _buildNormalTile(context),
-          );
-        },
-      ),
+    );
+  }
+
+  Widget _buildChildWhenDragging(BuildContext context) {
+    return Opacity(
+      opacity: 0.5,
+      child: _buildNormalTile(context),
+    );
+  }
+
+  Widget _buildDragTarget(BuildContext context) {
+    return DragTarget<Task>(
+      onWillAccept: (data) => data != null && data.id != task.id,
+      onAccept: (draggedTask) {
+        onDragAccept?.call(draggedTask);
+      },
+      builder: (context, candidateData, rejectedData) {
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            color: candidateData.isNotEmpty
+                ? Theme.of(context)
+                    .colorScheme
+                    .primaryContainer
+                    .withOpacity(0.3)
+                : null,
+            borderRadius: BorderRadius.circular(8.0),
+          ),
+          child: _buildNormalTile(context),
+        );
+      },
     );
   }
 
