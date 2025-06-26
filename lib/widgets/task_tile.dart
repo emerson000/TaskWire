@@ -130,7 +130,11 @@ class TaskTile extends StatelessWidget {
   }
 
   Widget _buildNormalTile(BuildContext context) {
-    return ListTile(
+    final isDesktop = defaultTargetPlatform == TargetPlatform.windows || 
+                     defaultTargetPlatform == TargetPlatform.macOS || 
+                     defaultTargetPlatform == TargetPlatform.linux;
+    
+    Widget tileContent = ListTile(
       leading: Checkbox(
         value: task.isCompleted,
         onChanged: onCheckboxChanged,
@@ -165,14 +169,89 @@ class TaskTile extends StatelessWidget {
             icon: const Icon(Icons.edit),
             onPressed: onEdit,
           ),
-          IconButton(
-            icon: const Icon(Icons.delete),
-            onPressed: onDelete,
-          ),
         ],
       ),
       onTap: onTap,
     );
+
+    if (isDesktop) {
+      return GestureDetector(
+        onSecondaryTapDown: (TapDownDetails details) => _showContextMenu(context, details.globalPosition),
+        child: tileContent,
+      );
+    } else {
+      return Dismissible(
+        key: Key('task_${task.id}'),
+        direction: DismissDirection.endToStart,
+        background: Container(
+          alignment: Alignment.centerRight,
+          padding: const EdgeInsets.only(right: 20.0),
+          color: Theme.of(context).colorScheme.error,
+          child: const Icon(
+            Icons.delete,
+            color: Colors.white,
+          ),
+        ),
+        confirmDismiss: (direction) async {
+          onDelete?.call();
+          return false;
+        },
+        child: tileContent,
+      );
+    }
+  }
+
+  void _showContextMenu(BuildContext context, Offset position) {
+    final RenderBox overlay = Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
+    final RelativeRect menuPosition = RelativeRect.fromLTRB(
+      position.dx,
+      position.dy,
+      overlay.size.width - position.dx,
+      overlay.size.height - position.dy,
+    );
+
+    showMenu<String>(
+      context: context,
+      position: menuPosition,
+      items: [
+        PopupMenuItem<String>(
+          value: 'edit',
+          child: const Row(
+            children: [
+              Icon(Icons.edit, size: 16),
+              SizedBox(width: 8),
+              Text('Edit'),
+            ],
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'delete',
+          child: Row(
+            children: [
+              Icon(
+                Icons.delete,
+                size: 16,
+                color: Colors.red,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Delete',
+                style: TextStyle(color: Colors.red),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ).then((value) {
+      switch (value) {
+        case 'edit':
+          onEdit?.call();
+          break;
+        case 'delete':
+          onDelete?.call();
+          break;
+      }
+    });
   }
 
   Widget _buildEditingTile(BuildContext context) {
