@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/task.dart';
 import '../services/task_manager.dart';
 import '../services/printer_service.dart';
+import '../services/preference_service.dart';
 import 'task_tile.dart';
 import 'print_menu.dart';
 import 'zero_state.dart';
@@ -59,6 +60,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
   static const double _defaultColumnWidth = 350.0;
   static const double _minColumnWidth = 200.0;
   static const double _maxColumnWidth = 600.0;
+  bool _isLoadingWidths = true;
 
   @override
   void didUpdateWidget(covariant DesktopColumnView oldWidget) {
@@ -77,9 +79,32 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
   @override
   void initState() {
     super.initState();
+    _loadColumnWidths();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       widget.onColumnChange?.call(null, 0);
     });
+  }
+
+  Future<void> _loadColumnWidths() async {
+    try {
+      final savedWidths = await PreferenceService.getAllColumnWidths();
+      setState(() {
+        _columnWidths.addAll(savedWidths);
+        _isLoadingWidths = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingWidths = false;
+      });
+    }
+  }
+
+  Future<void> _saveColumnWidth(int columnIndex, double width) async {
+    try {
+      await PreferenceService.saveColumnWidth(columnIndex, width);
+    } catch (e) {
+      // Silently handle save errors
+    }
   }
 
   Future<void> _navigateToSubtasks(Task parentTask) async {
@@ -132,7 +157,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
   }
 
   void _resetColumnWidths() {
-    _columnWidths.clear();
+    // Don't clear the widths when resetting, just keep the current ones
   }
 
   Future<void> _printColumn(Task? parent) async {
@@ -606,7 +631,11 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
             message: 'Drag to resize • Double-click to reset',
             child: GestureDetector(
               onPanStart: (_) => setLocalState(() => isDragging = true),
-              onPanEnd: (_) => setLocalState(() => isDragging = false),
+              onPanEnd: (_) {
+                setLocalState(() => isDragging = false);
+                final currentWidth = _columnWidths[columnIndex] ?? _defaultColumnWidth;
+                _saveColumnWidth(columnIndex, currentWidth);
+              },
               onPanUpdate: (details) {
                 setState(() {
                   final currentWidth = _columnWidths[columnIndex] ?? _defaultColumnWidth;
@@ -617,6 +646,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
               onDoubleTap: () {
                 setState(() {
                   _columnWidths.remove(columnIndex);
+                  PreferenceService.clearColumnWidth(columnIndex);
                 });
               },
               child: Container(
