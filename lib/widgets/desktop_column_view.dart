@@ -108,18 +108,22 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
   }
 
   Future<void> _navigateToSubtasks(Task parentTask) async {
-    final existingIndex = _columnHierarchy.indexWhere((task) => task?.id == parentTask.id);
+    final existingIndex = _columnHierarchy.indexWhere(
+      (task) => task?.id == parentTask.id,
+    );
 
     if (existingIndex != -1) {
       _columnHierarchy = _columnHierarchy.sublist(0, existingIndex + 1);
     } else {
       final newHierarchy = <Task?>[null];
-      
+
       var currentTask = await widget.taskManager.findTaskById(parentTask.id);
       final ancestors = <Task>[];
       if (currentTask != null) {
         while (currentTask?.parentId != null) {
-          final parent = await widget.taskManager.findTaskById(currentTask!.parentId!);
+          final parent = await widget.taskManager.findTaskById(
+            currentTask!.parentId!,
+          );
           if (parent != null) {
             ancestors.insert(0, parent);
             currentTask = parent;
@@ -131,10 +135,10 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
       newHierarchy.addAll(ancestors);
       newHierarchy.add(parentTask);
       _columnHierarchy = newHierarchy;
-      
+
       _resetColumnWidths();
     }
-    
+
     setState(() {});
     widget.onColumnChange?.call(parentTask, _columnHierarchy.length - 1);
 
@@ -326,20 +330,20 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
     if (columnIndex < 0 || columnIndex >= _columnHierarchy.length) {
       return 'All Tasks';
     }
-    
+
     final pathParts = <String>[];
-    
+
     for (int i = 0; i <= columnIndex; i++) {
       final task = _columnHierarchy[i];
       if (task != null) {
         pathParts.add(task.title);
       }
     }
-    
+
     if (pathParts.isEmpty) {
       return 'All Tasks';
     }
-    
+
     return pathParts.join(' > ');
   }
 
@@ -403,23 +407,27 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
       child: Row(
         children: [
           Expanded(
-            child: SingleChildScrollView(
+            child: Scrollbar(
+              scrollbarOrientation: ScrollbarOrientation.bottom,
               controller: _scrollController,
-              scrollDirection: Axis.horizontal,
-              child: FutureBuilder<List<Widget>>(
-                future: _buildColumns(),
-                builder: (context, snapshot) {
-                  if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}'));
-                  }
-                  if (!snapshot.hasData) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: snapshot.data!,
-                  );
-                },
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                scrollDirection: Axis.horizontal,
+                child: FutureBuilder<List<Widget>>(
+                  future: _buildColumns(),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      return Center(child: Text('Error: ${snapshot.error}'));
+                    }
+                    if (!snapshot.hasData) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: snapshot.data!,
+                    );
+                  },
+                ),
               ),
             ),
           ),
@@ -482,7 +490,10 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                           ).colorScheme.primaryContainer.withOpacity(0.1)
                         : null,
                   ),
-                  child: tasks.isEmpty && !(widget.showAddTask && widget.addTaskColumnIndex == columnIndex)
+                  child:
+                      tasks.isEmpty &&
+                          !(widget.showAddTask &&
+                              widget.addTaskColumnIndex == columnIndex)
                       ? ZeroState(
                           parentTitle: parent?.title,
                           onAddTask: () => widget.onAddTask(
@@ -493,9 +504,16 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                           isDesktop: true,
                         )
                       : ListView.builder(
-                          itemCount: tasks.length + (widget.showAddTask && widget.addTaskColumnIndex == columnIndex ? 1 : 0),
+                          itemCount:
+                              tasks.length +
+                              (widget.showAddTask &&
+                                      widget.addTaskColumnIndex == columnIndex
+                                  ? 1
+                                  : 0),
                           itemBuilder: (context, index) {
-                            if (widget.showAddTask && widget.addTaskColumnIndex == columnIndex && index == tasks.length) {
+                            if (widget.showAddTask &&
+                                widget.addTaskColumnIndex == columnIndex &&
+                                index == tasks.length) {
                               return AddTaskTile(
                                 parentId: parent?.id?.toString(),
                                 parentTitle: parent?.title,
@@ -503,7 +521,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                                 onCancel: widget.onHideAddTask,
                               );
                             }
-                            
+
                             final task = tasks[index];
                             return DragTarget<Task>(
                               onWillAccept: (data) =>
@@ -516,7 +534,8 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                                   task: task,
                                   isEditing: widget.editingTaskId == task.id,
                                   editController: widget.editController,
-                                  onTap: () async => await _navigateToSubtasks(task),
+                                  onTap: () async =>
+                                      await _navigateToSubtasks(task),
                                   onEdit: () => widget.onStartEditing(task),
                                   onDelete: () => widget.onDeleteTask(task.id),
                                   onCheckboxChanged: (_) => widget.onUpdateTask(
@@ -588,7 +607,9 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onPrimaryContainer,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onPrimaryContainer,
                         ),
                       ),
                     ),
@@ -600,12 +621,17 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
             onPrintLevel: () => _printColumn(parent),
             onPrintWithSubtasks: () => _printColumnWithSubtasks(parent),
             onPrintIndividualSlips: () => _printIndividualSlips(parent),
-            onPrintIndividualSlipsWithSubtasks: () => _printIndividualSlipsWithSubtasks(parent),
+            onPrintIndividualSlipsWithSubtasks: () =>
+                _printIndividualSlipsWithSubtasks(parent),
             type: PrintMenuType.menuAnchor,
           ),
           IconButton(
             icon: const Icon(Icons.add),
-            onPressed: () => widget.onAddTask(null, parent?.id?.toString(), columnIndex: columnIndex),
+            onPressed: () => widget.onAddTask(
+              null,
+              parent?.id?.toString(),
+              columnIndex: columnIndex,
+            ),
             tooltip: parent != null
                 ? 'Add subtask to ${parent.title}'
                 : 'Add new task',
@@ -622,7 +648,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
       builder: (context, setLocalState) {
         bool isHovered = false;
         bool isDragging = false;
-        
+
         return MouseRegion(
           cursor: SystemMouseCursors.resizeLeftRight,
           onEnter: (_) => setLocalState(() => isHovered = true),
@@ -633,13 +659,18 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
               onPanStart: (_) => setLocalState(() => isDragging = true),
               onPanEnd: (_) {
                 setLocalState(() => isDragging = false);
-                final currentWidth = _columnWidths[columnIndex] ?? _defaultColumnWidth;
+                final currentWidth =
+                    _columnWidths[columnIndex] ?? _defaultColumnWidth;
                 _saveColumnWidth(columnIndex, currentWidth);
               },
               onPanUpdate: (details) {
                 setState(() {
-                  final currentWidth = _columnWidths[columnIndex] ?? _defaultColumnWidth;
-                  final newWidth = (currentWidth + details.delta.dx).clamp(_minColumnWidth, _maxColumnWidth);
+                  final currentWidth =
+                      _columnWidths[columnIndex] ?? _defaultColumnWidth;
+                  final newWidth = (currentWidth + details.delta.dx).clamp(
+                    _minColumnWidth,
+                    _maxColumnWidth,
+                  );
                   _columnWidths[columnIndex] = newWidth;
                 });
               },
@@ -667,11 +698,13 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                         width: isDragging ? 3 : 2,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: isDragging 
+                          color: isDragging
                               ? Theme.of(context).colorScheme.primary
-                              : isHovered 
-                                  ? Theme.of(context).colorScheme.primary.withOpacity(0.7)
-                                  : Theme.of(context).dividerColor,
+                              : isHovered
+                              ? Theme.of(
+                                  context,
+                                ).colorScheme.primary.withOpacity(0.7)
+                              : Theme.of(context).dividerColor,
                           borderRadius: BorderRadius.circular(1),
                         ),
                       ),
