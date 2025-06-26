@@ -6,6 +6,7 @@ import '../models/task.dart';
 class TaskTile extends StatelessWidget {
   final Task task;
   final bool isEditing;
+  final bool isSelected;
   final TextEditingController? editController;
   final VoidCallback? onTap;
   final VoidCallback? onEdit;
@@ -20,6 +21,7 @@ class TaskTile extends StatelessWidget {
     super.key,
     required this.task,
     this.isEditing = false,
+    this.isSelected = false,
     this.editController,
     this.onTap,
     this.onEdit,
@@ -135,6 +137,7 @@ class TaskTile extends StatelessWidget {
                      defaultTargetPlatform == TargetPlatform.linux;
     
     Widget tileContent = ListTile(
+      tileColor: isSelected ? Theme.of(context).colorScheme.surfaceContainer : null,
       leading: Checkbox(
         value: task.isCompleted,
         onChanged: onCheckboxChanged,

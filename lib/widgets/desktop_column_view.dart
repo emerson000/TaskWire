@@ -523,6 +523,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                             }
 
                             final task = tasks[index];
+                            final isSelected = _columnHierarchy.contains(task);
                             return DragTarget<Task>(
                               onWillAccept: (data) =>
                                   data != null && data.id != task.id,
@@ -533,6 +534,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                                   key: ValueKey(task.id),
                                   task: task,
                                   isEditing: widget.editingTaskId == task.id,
+                                  isSelected: isSelected,
                                   editController: widget.editController,
                                   onTap: () async =>
                                       await _navigateToSubtasks(task),
