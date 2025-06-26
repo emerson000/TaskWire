@@ -55,6 +55,10 @@ class DesktopColumnView extends StatefulWidget {
 class _DesktopColumnViewState extends State<DesktopColumnView> {
   List<Task?> _columnHierarchy = [null];
   final ScrollController _scrollController = ScrollController();
+  final Map<int, double> _columnWidths = <int, double>{};
+  static const double _defaultColumnWidth = 350.0;
+  static const double _minColumnWidth = 200.0;
+  static const double _maxColumnWidth = 600.0;
 
   @override
   void didUpdateWidget(covariant DesktopColumnView oldWidget) {
@@ -102,6 +106,8 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
       newHierarchy.addAll(ancestors);
       newHierarchy.add(parentTask);
       _columnHierarchy = newHierarchy;
+      
+      _resetColumnWidths();
     }
     
     setState(() {});
@@ -119,9 +125,14 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
   void _navigateToColumn(int columnIndex) {
     setState(() {
       _columnHierarchy = _columnHierarchy.sublist(0, columnIndex + 1);
+      _resetColumnWidths();
     });
     final currentParent = _columnHierarchy[columnIndex];
     widget.onColumnChange?.call(currentParent, columnIndex);
+  }
+
+  void _resetColumnWidths() {
+    _columnWidths.clear();
   }
 
   Future<void> _printColumn(Task? parent) async {
@@ -354,7 +365,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
       );
 
       if (!isLastColumn) {
-        columns.add(Container(width: 1, color: Theme.of(context).dividerColor));
+        columns.add(_buildResizeHandle(i));
       }
     }
 
@@ -399,7 +410,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
     required bool isLastColumn,
   }) {
     return Container(
-      width: 350,
+      width: _columnWidths[columnIndex] ?? _defaultColumnWidth,
       height: double.infinity,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -578,6 +589,70 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildResizeHandle(int columnIndex) {
+    return StatefulBuilder(
+      builder: (context, setLocalState) {
+        bool isHovered = false;
+        bool isDragging = false;
+        
+        return MouseRegion(
+          cursor: SystemMouseCursors.resizeLeftRight,
+          onEnter: (_) => setLocalState(() => isHovered = true),
+          onExit: (_) => setLocalState(() => isHovered = false),
+          child: Tooltip(
+            message: 'Drag to resize • Double-click to reset',
+            child: GestureDetector(
+              onPanStart: (_) => setLocalState(() => isDragging = true),
+              onPanEnd: (_) => setLocalState(() => isDragging = false),
+              onPanUpdate: (details) {
+                setState(() {
+                  final currentWidth = _columnWidths[columnIndex] ?? _defaultColumnWidth;
+                  final newWidth = (currentWidth + details.delta.dx).clamp(_minColumnWidth, _maxColumnWidth);
+                  _columnWidths[columnIndex] = newWidth;
+                });
+              },
+              onDoubleTap: () {
+                setState(() {
+                  _columnWidths.remove(columnIndex);
+                });
+              },
+              child: Container(
+                width: 8,
+                color: Colors.transparent,
+                child: Stack(
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 1,
+                        height: double.infinity,
+                        color: Theme.of(context).dividerColor.withOpacity(0.3),
+                      ),
+                    ),
+                    Center(
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        width: isDragging ? 3 : 2,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: isDragging 
+                              ? Theme.of(context).colorScheme.primary
+                              : isHovered 
+                                  ? Theme.of(context).colorScheme.primary.withOpacity(0.7)
+                                  : Theme.of(context).dividerColor,
+                          borderRadius: BorderRadius.circular(1),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
