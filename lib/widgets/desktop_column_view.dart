@@ -66,7 +66,12 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
   void didUpdateWidget(covariant DesktopColumnView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.refreshKey != oldWidget.refreshKey) {
-      setState(() {});
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await _validateAndCleanupHierarchy();
+        if (mounted) {
+          setState(() {});
+        }
+      });
     }
   }
 
@@ -746,5 +751,28 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
         );
       },
     );
+  }
+
+  Future<void> _validateAndCleanupHierarchy() async {
+    final validHierarchy = <Task?>[null];
+    
+    for (int i = 1; i < _columnHierarchy.length; i++) {
+      final task = _columnHierarchy[i];
+      if (task != null) {
+        final existingTask = await widget.taskManager.findTaskById(task.id);
+        if (existingTask != null) {
+          validHierarchy.add(existingTask);
+        } else {
+          break;
+        }
+      }
+    }
+    
+    if (validHierarchy.length != _columnHierarchy.length) {
+      _columnHierarchy = validHierarchy;
+      final currentParent = _columnHierarchy.isNotEmpty ? _columnHierarchy.last : null;
+      final currentIndex = _columnHierarchy.length - 1;
+      widget.onColumnChange?.call(currentParent, currentIndex);
+    }
   }
 }
