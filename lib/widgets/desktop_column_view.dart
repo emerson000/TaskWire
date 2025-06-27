@@ -720,7 +720,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                 });
               },
               child: Container(
-                width: 8,
+                width: 24,
                 color: Colors.transparent,
                 child: Stack(
                   children: [
