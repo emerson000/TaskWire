@@ -299,9 +299,10 @@ class PrinterService {
     String printerId,
     List<Task> tasks, {
     String? columnTitle,
+    String? hierarchyPath,
   }) async {
     try {
-      final columnBytes = await _generateColumnReceiptBytes(tasks, columnTitle);
+      final columnBytes = await _generateColumnReceiptBytes(tasks, columnTitle, hierarchyPath);
       return await printJob(printerId, columnBytes);
     } catch (e) {
       print('Error in print column: $e');
@@ -313,11 +314,13 @@ class PrinterService {
     String printerId,
     List<Task> tasks, {
     String? columnTitle,
+    String? hierarchyPath,
   }) async {
     try {
       final columnBytes = await _generateColumnWithSubtasksReceiptBytes(
         tasks,
         columnTitle,
+        hierarchyPath,
       );
       return await printJob(printerId, columnBytes);
     } catch (e) {
@@ -385,11 +388,25 @@ class PrinterService {
   Future<List<int>> _generateColumnWithSubtasksReceiptBytes(
     List<Task> tasks,
     String? columnTitle,
+    String? hierarchyPath,
   ) async {
     final generator = await _createGenerator();
 
     List<int> bytes = [];
     bytes += generator.reset();
+
+    if (hierarchyPath != null && hierarchyPath != columnTitle) {
+      bytes += generator.text(
+        hierarchyPath,
+        styles: PosStyles(
+          height: PosTextSize.size1,
+          width: PosTextSize.size1,
+          align: PosAlign.center,
+          bold: true,
+        ),
+      );
+      bytes += generator.text('');
+    }
 
     final title = columnTitle ?? 'TaskWire Column';
     bytes += _wrapTextForSize2(
@@ -484,11 +501,25 @@ class PrinterService {
   Future<List<int>> _generateColumnReceiptBytes(
     List<Task> tasks,
     String? columnTitle,
+    String? hierarchyPath,
   ) async {
     final generator = await _createGenerator();
 
     List<int> bytes = [];
     bytes += generator.reset();
+
+    if (hierarchyPath != null && hierarchyPath != columnTitle) {
+      bytes += generator.text(
+        hierarchyPath,
+        styles: PosStyles(
+          height: PosTextSize.size1,
+          width: PosTextSize.size1,
+          align: PosAlign.center,
+          bold: true,
+        ),
+      );
+      bytes += generator.text('');
+    }
 
     final title = columnTitle ?? 'TaskWire Column';
     bytes += _wrapTextForSize2(
@@ -612,6 +643,7 @@ class PrinterService {
     required bool includeSubtasks,
     required BuildContext context,
     String? printType,
+    String? hierarchyPath,
   }) async {
     try {
       final printers = await getPrinters();
@@ -648,11 +680,13 @@ class PrinterService {
                   selectedPrinterId!,
                   tasks,
                   columnTitle: levelTitle,
+                  hierarchyPath: hierarchyPath,
                 )
               : await printColumn(
                   selectedPrinterId!,
                   tasks,
                   columnTitle: levelTitle,
+                  hierarchyPath: hierarchyPath,
                 );
           break;
         case 'individual_slips':
@@ -660,12 +694,12 @@ class PrinterService {
               ? await printIndividualSlipsWithSubtasks(
                   selectedPrinterId!,
                   tasks,
-                  hierarchyPath: levelTitle,
+                  hierarchyPath: hierarchyPath ?? levelTitle,
                 )
               : await printIndividualSlips(
                   selectedPrinterId!,
                   tasks,
-                  hierarchyPath: levelTitle,
+                  hierarchyPath: hierarchyPath ?? levelTitle,
                 );
           break;
         default:
@@ -674,11 +708,13 @@ class PrinterService {
                   selectedPrinterId!,
                   tasks,
                   columnTitle: levelTitle,
+                  hierarchyPath: hierarchyPath,
                 )
               : await printColumn(
                   selectedPrinterId!,
                   tasks,
                   columnTitle: levelTitle,
+                  hierarchyPath: hierarchyPath,
                 );
       }
 

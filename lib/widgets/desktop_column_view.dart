@@ -171,9 +171,12 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
       );
 
       final columnTitle = parent?.title ?? 'All Tasks';
+      final columnIndex = _columnHierarchy.indexOf(parent);
+      final hierarchyPath = _buildHierarchyPath(columnIndex);
       final result = await widget.printerService.printTasksWithPrinterSelection(
         tasks: tasks,
         levelTitle: columnTitle,
+        hierarchyPath: hierarchyPath,
         includeSubtasks: false,
         context: context,
         printType: 'checklist',
@@ -211,9 +214,12 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
       );
 
       final columnTitle = parent?.title ?? 'All Tasks';
+      final columnIndex = _columnHierarchy.indexOf(parent);
+      final hierarchyPath = _buildHierarchyPath(columnIndex);
       final result = await widget.printerService.printTasksWithPrinterSelection(
         tasks: tasks,
         levelTitle: columnTitle,
+        hierarchyPath: hierarchyPath,
         includeSubtasks: true,
         context: context,
         printType: 'checklist',
@@ -251,7 +257,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
       );
 
       final columnIndex = _columnHierarchy.indexOf(parent);
-      final hierarchyPath = _buildHierarchyPath(columnIndex);
+      final hierarchyPath = _buildHierarchyPathForIndividualSlips(columnIndex);
       final result = await widget.printerService.printTasksWithPrinterSelection(
         tasks: tasks,
         levelTitle: hierarchyPath,
@@ -292,7 +298,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
       );
 
       final columnIndex = _columnHierarchy.indexOf(parent);
-      final hierarchyPath = _buildHierarchyPath(columnIndex);
+      final hierarchyPath = _buildHierarchyPathForIndividualSlips(columnIndex);
       final result = await widget.printerService.printTasksWithPrinterSelection(
         tasks: tasks,
         levelTitle: hierarchyPath,
@@ -327,6 +333,27 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
   }
 
   String _buildHierarchyPath(int columnIndex) {
+    if (columnIndex < 0 || columnIndex >= _columnHierarchy.length) {
+      return 'All Tasks';
+    }
+
+    final pathParts = <String>[];
+
+    for (int i = 0; i < columnIndex; i++) {
+      final task = _columnHierarchy[i];
+      if (task != null) {
+        pathParts.add(task.title);
+      }
+    }
+
+    if (pathParts.isEmpty) {
+      return 'All Tasks';
+    }
+
+    return pathParts.join(' > ');
+  }
+
+  String _buildHierarchyPathForIndividualSlips(int columnIndex) {
     if (columnIndex < 0 || columnIndex >= _columnHierarchy.length) {
       return 'All Tasks';
     }

@@ -75,9 +75,11 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
       );
 
       final levelTitle = _currentParent?.title ?? 'All Tasks';
+      final hierarchyPath = _buildHierarchyPath();
       final result = await widget.printerService.printTasksWithPrinterSelection(
         tasks: tasks,
         levelTitle: levelTitle,
+        hierarchyPath: hierarchyPath,
         includeSubtasks: false,
         context: context,
         printType: 'checklist',
@@ -115,9 +117,11 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
       );
 
       final levelTitle = _currentParent?.title ?? 'All Tasks';
+      final hierarchyPath = _buildHierarchyPath();
       final result = await widget.printerService.printTasksWithPrinterSelection(
         tasks: tasks,
         levelTitle: levelTitle,
+        hierarchyPath: hierarchyPath,
         includeSubtasks: true,
         context: context,
         printType: 'checklist',
@@ -154,7 +158,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
         _currentParent?.id?.toString(),
       );
 
-      final hierarchyPath = _buildHierarchyPath();
+      final hierarchyPath = _buildHierarchyPathForIndividualSlips();
       final result = await widget.printerService.printTasksWithPrinterSelection(
         tasks: tasks,
         levelTitle: hierarchyPath,
@@ -194,7 +198,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
         _currentParent?.id?.toString(),
       );
 
-      final hierarchyPath = _buildHierarchyPath();
+      final hierarchyPath = _buildHierarchyPathForIndividualSlips();
       final result = await widget.printerService.printTasksWithPrinterSelection(
         tasks: tasks,
         levelTitle: hierarchyPath,
@@ -229,6 +233,27 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
   }
 
   String _buildHierarchyPath() {
+    if (_currentParent == null) {
+      return 'All Tasks';
+    }
+    
+    final pathParts = <String>[];
+    
+    for (int i = 0; i < _breadcrumbs.length - 1; i++) {
+      final task = _breadcrumbs[i];
+      if (task != null) {
+        pathParts.add(task.title);
+      }
+    }
+    
+    if (pathParts.isEmpty) {
+      return 'All Tasks';
+    }
+    
+    return pathParts.join(' > ');
+  }
+
+  String _buildHierarchyPathForIndividualSlips() {
     if (_currentParent == null) {
       return 'All Tasks';
     }
