@@ -144,16 +144,21 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
       _resetColumnWidths();
     }
 
-    setState(() {});
     widget.onColumnChange?.call(parentTask, _columnHierarchy.length - 1);
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    });
+    if (existingIndex == -1) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Future.delayed(const Duration(milliseconds: 50), () {
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              _scrollController.position.maxScrollExtent,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            );
+          }
+        });
+      });
+    }
   }
 
   void _navigateToColumn(int columnIndex) {
