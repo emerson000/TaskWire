@@ -6,6 +6,7 @@ import 'package:taskwire/pages/printer_settings_page.dart';
 import 'package:taskwire/repositories/printer_repository.dart';
 import 'package:taskwire/repositories/task_repository.dart';
 import 'package:taskwire/services/task_manager.dart';
+import 'package:taskwire/services/preference_service.dart';
 
 final getIt = GetIt.instance;
 
@@ -36,17 +37,43 @@ class AppWrapper extends StatefulWidget {
 
 class _AppWrapperState extends State<AppWrapper> {
   ThemeMode _themeMode = ThemeMode.system;
+  bool _isLoading = true;
 
-  void toggleThemeMode() {
+  @override
+  void initState() {
+    super.initState();
+    _loadThemeMode();
+  }
+
+  Future<void> _loadThemeMode() async {
+    final savedThemeMode = await PreferenceService.getThemeMode();
+    setState(() {
+      _themeMode = savedThemeMode;
+      _isLoading = false;
+    });
+  }
+
+  void toggleThemeMode() async {
     setState(() {
       final currentIndex = ThemeMode.values.indexOf(_themeMode);
       final nextIndex = (currentIndex + 1) % ThemeMode.values.length;
       _themeMode = ThemeMode.values[nextIndex];
     });
+    await PreferenceService.saveThemeMode(_themeMode);
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: CircularProgressIndicator(),
+          ),
+        ),
+      );
+    }
+    
     return MyApp(
       themeMode: _themeMode,
       onThemeModeChanged: toggleThemeMode,
