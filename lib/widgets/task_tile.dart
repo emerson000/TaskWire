@@ -132,12 +132,13 @@ class TaskTile extends StatelessWidget {
   }
 
   Widget _buildNormalTile(BuildContext context) {
-    final isDesktop = defaultTargetPlatform == TargetPlatform.windows || 
-                     defaultTargetPlatform == TargetPlatform.macOS || 
-                     defaultTargetPlatform == TargetPlatform.linux;
-    
+    final isDesktop = defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.linux;
+
     Widget tileContent = ListTile(
-      tileColor: isSelected ? Theme.of(context).colorScheme.surfaceContainer : null,
+      tileColor:
+          isSelected ? Theme.of(context).colorScheme.surfaceContainer : null,
       leading: Checkbox(
         value: task.isCompleted,
         onChanged: onCheckboxChanged,
@@ -179,7 +180,9 @@ class TaskTile extends StatelessWidget {
 
     if (isDesktop) {
       return GestureDetector(
-        onSecondaryTapDown: (TapDownDetails details) => _showContextMenu(context, details.globalPosition),
+        onDoubleTap: onEdit, // Added this line
+        onSecondaryTapDown: (TapDownDetails details) =>
+            _showContextMenu(context, details.globalPosition),
         child: tileContent,
       );
     } else {
