@@ -4,10 +4,10 @@ import '../main.dart';
 import '../models/task.dart';
 import '../services/task_manager.dart';
 import '../services/printer_service.dart';
-import '../services/logging_service.dart';
 import '../repositories/printer_repository.dart';
 import '../widgets/desktop_column_view.dart';
 import '../widgets/mobile_drill_down_view.dart';
+import '../widgets/task_tile.dart';
 
 class ListPage extends StatefulWidget {
   const ListPage({super.key});
@@ -69,7 +69,7 @@ class _ListPageState extends State<ListPage> {
       });
     } catch (e) {
       if (kDebugMode) {
-        LoggingService.error('Error creating task: $e');
+        print('Error creating task: $e');
       }
     }
   }
@@ -103,9 +103,7 @@ class _ListPageState extends State<ListPage> {
     final task = await _taskManager.findTaskById(taskId);
     if (task == null) return;
 
-    if (!mounted) return;
-
-    final confirmed = await showDialog<bool>(
+    showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Task'),
@@ -116,19 +114,18 @@ class _ListPageState extends State<ListPage> {
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () async {
+              await _taskManager.deleteTask(taskId);
+              setState(() {
+                _refreshCounter++;
+              });
+              Navigator.pop(context);
+            },
             child: const Text('Delete'),
           ),
         ],
       ),
     );
-
-    if (confirmed == true) {
-      await _taskManager.deleteTask(taskId);
-      setState(() {
-        _refreshCounter++;
-      });
-    }
   }
 
   void _startEditing(Task task) {
@@ -180,7 +177,7 @@ class _ListPageState extends State<ListPage> {
       body: isDesktop ? _buildDesktopView() : _buildMobileView(),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          _showAddTaskInline(_currentParent?.id.toString(), _currentParent?.title, columnIndex: _currentColumnIndex);
+          _showAddTaskInline(_currentParent?.id?.toString(), _currentParent?.title, columnIndex: _currentColumnIndex);
         },
         tooltip: 'Add Task',
         child: const Icon(Icons.add),

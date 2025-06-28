@@ -1,7 +1,6 @@
 import 'package:taskwire/models/printer.dart';
 import 'package:taskwire/models/task.dart';
 import 'package:taskwire/repositories/printer_repository.dart';
-import 'package:taskwire/services/logging_service.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:print_usb/print_usb.dart';
 import 'package:flutter_esc_pos_network/flutter_esc_pos_network.dart';
@@ -78,7 +77,7 @@ class PrinterService {
           )
           .toList();
     } catch (e) {
-      LoggingService.error('Error scanning USB printers on Android: $e');
+      print('Error scanning USB printers on Android: $e');
       return [];
     }
   }
@@ -97,7 +96,7 @@ class PrinterService {
           )
           .toList();
     } catch (e) {
-      LoggingService.error('Error scanning USB printers: $e');
+      print('Error scanning USB printers: $e');
       return [];
     }
   }
@@ -156,7 +155,7 @@ class PrinterService {
         }
       } else if (printer.type == PrinterType.network) {
         if (!_isValidIpAddress(printer.address)) {
-          LoggingService.warning('Invalid IP address: ${printer.address}');
+          print('Invalid IP address: ${printer.address}');
           return false;
         }
 
@@ -175,14 +174,14 @@ class PrinterService {
             await _repository.updatePrinter(printer);
             return true;
           } else {
-            LoggingService.error('Failed to connect to network printer: ${connectResult.msg}');
+            print('Failed to connect to network printer: ${connectResult.msg}');
             _networkPrinters.remove(printerId);
             printer.isConnected = false;
             await _repository.updatePrinter(printer);
             return false;
           }
         } catch (e) {
-          LoggingService.error('Error connecting to network printer: $e');
+          print('Error connecting to network printer: $e');
           _networkPrinters.remove(printerId);
           printer.isConnected = false;
           await _repository.updatePrinter(printer);
@@ -195,7 +194,7 @@ class PrinterService {
       await _repository.updatePrinter(printer);
       return true;
     } catch (e) {
-      LoggingService.error('Error connecting to printer: $e');
+      print('Error connecting to printer: $e');
       return false;
     }
   }
@@ -260,7 +259,7 @@ class PrinterService {
           await Future.delayed(const Duration(seconds: 1));
           return success;
         } catch (e) {
-          LoggingService.error('Network printer error: $e');
+          print('Network printer error: $e');
           if (!keepConnected) {
             try {
               networkPrinter.disconnect();
@@ -268,7 +267,7 @@ class PrinterService {
               printer.isConnected = false;
               await _repository.updatePrinter(printer);
             } catch (disconnectError) {
-              LoggingService.error('Error disconnecting after print: $disconnectError');
+              print('Error disconnecting after print: $disconnectError');
             }
           }
 
@@ -281,7 +280,7 @@ class PrinterService {
       }
       return false;
     } catch (e) {
-      LoggingService.error('Error printing job: $e');
+      print('Error printing job: $e');
       return false;
     }
   }
@@ -291,7 +290,7 @@ class PrinterService {
       final testBytes = await _generateTestReceiptBytes();
       return await printJob(printerId, testBytes);
     } catch (e) {
-      LoggingService.error('Error in test print: $e');
+      print('Error in test print: $e');
       return false;
     }
   }
@@ -306,7 +305,7 @@ class PrinterService {
       final columnBytes = await _generateColumnReceiptBytes(tasks, columnTitle, hierarchyPath);
       return await printJob(printerId, columnBytes);
     } catch (e) {
-      LoggingService.error('Error in print column: $e');
+      print('Error in print column: $e');
       return false;
     }
   }
@@ -325,7 +324,7 @@ class PrinterService {
       );
       return await printJob(printerId, columnBytes);
     } catch (e) {
-      LoggingService.error('Error in print column with subtasks: $e');
+      print('Error in print column with subtasks: $e');
       return false;
     }
   }
@@ -353,7 +352,7 @@ class PrinterService {
 
       return await printJob(printerId, allBytes);
     } catch (e) {
-      LoggingService.error('Error in print individual slips: $e');
+      print('Error in print individual slips: $e');
       return false;
     }
   }
@@ -381,7 +380,7 @@ class PrinterService {
 
       return await printJob(printerId, allBytes);
     } catch (e) {
-      LoggingService.error('Error in print individual slips with subtasks: $e');
+      print('Error in print individual slips with subtasks: $e');
       return false;
     }
   }
@@ -614,7 +613,7 @@ class PrinterService {
           try {
             networkPrinter.disconnect();
           } catch (e) {
-            LoggingService.error('Error disconnecting network printer: $e');
+            print('Error disconnecting network printer: $e');
           }
           _networkPrinters.remove(printerId);
         }
@@ -623,7 +622,7 @@ class PrinterService {
       printer.isConnected = false;
       await _repository.updatePrinter(printer);
     } catch (e) {
-      LoggingService.error('Error disconnecting printer: $e');
+      print('Error disconnecting printer: $e');
     }
   }
 
@@ -632,7 +631,7 @@ class PrinterService {
       try {
         networkPrinter.disconnect();
       } catch (e) {
-        LoggingService.error('Error disposing network printer: $e');
+        print('Error disposing network printer: $e');
       }
     }
     _networkPrinters.clear();
@@ -660,13 +659,6 @@ class PrinterService {
       if (printers.length == 1) {
         selectedPrinterId = printers.first.id;
       } else {
-        if (!context.mounted) {
-          return PrintResult(
-            success: false,
-            errorMessage: 'Widget was disposed before printer selection.',
-            errorType: PrintErrorType.cancelled,
-          );
-        }
         selectedPrinterId = await _showPrinterSelectionDialog(
           context,
           printers,
@@ -680,26 +672,18 @@ class PrinterService {
         }
       }
 
-      if (!context.mounted) {
-        return PrintResult(
-          success: false,
-          errorMessage: 'Widget was disposed during printer selection.',
-          errorType: PrintErrorType.cancelled,
-        );
-      }
-
       bool success;
       switch (printType) {
         case 'checklist':
           success = includeSubtasks
               ? await printColumnWithSubtasks(
-                  selectedPrinterId,
+                  selectedPrinterId!,
                   tasks,
                   columnTitle: levelTitle,
                   hierarchyPath: hierarchyPath,
                 )
               : await printColumn(
-                  selectedPrinterId,
+                  selectedPrinterId!,
                   tasks,
                   columnTitle: levelTitle,
                   hierarchyPath: hierarchyPath,
@@ -708,12 +692,12 @@ class PrinterService {
         case 'individual_slips':
           success = includeSubtasks
               ? await printIndividualSlipsWithSubtasks(
-                  selectedPrinterId,
+                  selectedPrinterId!,
                   tasks,
                   hierarchyPath: hierarchyPath ?? levelTitle,
                 )
               : await printIndividualSlips(
-                  selectedPrinterId,
+                  selectedPrinterId!,
                   tasks,
                   hierarchyPath: hierarchyPath ?? levelTitle,
                 );
@@ -721,13 +705,13 @@ class PrinterService {
         default:
           success = includeSubtasks
               ? await printColumnWithSubtasks(
-                  selectedPrinterId,
+                  selectedPrinterId!,
                   tasks,
                   columnTitle: levelTitle,
                   hierarchyPath: hierarchyPath,
                 )
               : await printColumn(
-                  selectedPrinterId,
+                  selectedPrinterId!,
                   tasks,
                   columnTitle: levelTitle,
                   hierarchyPath: hierarchyPath,

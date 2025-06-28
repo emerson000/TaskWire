@@ -4,7 +4,6 @@ import 'package:drift/native.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:taskwire/models/printer.dart';
-import 'package:taskwire/services/logging_service.dart';
 
 part 'database.g.dart';
 
@@ -53,18 +52,18 @@ class AppDatabase extends _$AppDatabase {
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (Migrator m) async {
-      LoggingService.info('Creating database with all tables...');
+      print('Creating database with all tables...');
       await m.createAll();
     },
     onUpgrade: (Migrator m, int from, int to) async {
-      LoggingService.info('Migrating database from version $from to $to');
+      print('Migrating database from version $from to $to');
       if (from < 4) {
-        LoggingService.info('Creating printers table...');
+        print('Creating printers table...');
         await m.createTable(printers);
       }
     },
     beforeOpen: (details) async {
-      LoggingService.info(
+      print(
         'Database opened. Schema version: ${details.versionBefore} -> ${details.versionNow}',
       );
       await customStatement('''

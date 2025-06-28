@@ -109,9 +109,9 @@ class TaskTile extends StatelessWidget {
 
   Widget _buildDragTarget(BuildContext context) {
     return DragTarget<Task>(
-      onWillAcceptWithDetails: (details) => details.data.id != task.id,
-      onAcceptWithDetails: (details) {
-        onDragAccept?.call(details.data);
+      onWillAccept: (data) => data != null && data.id != task.id,
+      onAccept: (draggedTask) {
+        onDragAccept?.call(draggedTask);
       },
       builder: (context, candidateData, rejectedData) {
         return AnimatedContainer(
@@ -121,7 +121,7 @@ class TaskTile extends StatelessWidget {
                 ? Theme.of(context)
                     .colorScheme
                     .primaryContainer
-                    .withValues(alpha: 0.3)
+                    .withOpacity(0.3)
                 : null,
             borderRadius: BorderRadius.circular(8.0),
           ),
@@ -171,16 +171,17 @@ class TaskTile extends StatelessWidget {
             ),
           IconButton(
             icon: const Icon(Icons.edit),
-            onPressed: onEdit,
+            onPressed: onEdit, // This can be removed if only double-tap edits
           ),
         ],
       ),
-      onTap: onTap,
+      // onTap: onTap, // Will be handled by the GestureDetector
     );
 
     if (isDesktop) {
       return GestureDetector(
-        onDoubleTap: onEdit, // Added this line
+        onTap: onTap, // Added for single-tap
+        onDoubleTap: onEdit,
         onSecondaryTapDown: (TapDownDetails details) =>
             _showContextMenu(context, details.globalPosition),
         child: tileContent,
@@ -261,15 +262,15 @@ class TaskTile extends StatelessWidget {
   }
 
   Widget _buildEditingTile(BuildContext context) {
-    void handleKeyEvent(KeyEvent event) {
-      if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
+    void handleKeyEvent(RawKeyEvent event) {
+      if (event is RawKeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
         onEditCancel?.call();
       }
     }
 
-    return KeyboardListener(
+    return RawKeyboardListener(
       focusNode: FocusNode(),
-      onKeyEvent: handleKeyEvent,
+      onKey: handleKeyEvent,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         child: Row(
@@ -386,17 +387,17 @@ class _AddTaskTileState extends State<AddTaskTile> {
     widget.onCancel?.call();
   }
 
-  void _handleKeyEvent(KeyEvent event) {
-    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
+  void _handleKeyEvent(RawKeyEvent event) {
+    if (event is RawKeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
       _cancel();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return KeyboardListener(
+    return RawKeyboardListener(
       focusNode: FocusNode(),
-      onKeyEvent: _handleKeyEvent,
+      onKey: _handleKeyEvent,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         child: Row(
