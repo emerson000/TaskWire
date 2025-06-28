@@ -677,13 +677,13 @@ class PrinterService {
         case 'checklist':
           success = includeSubtasks
               ? await printColumnWithSubtasks(
-                  selectedPrinterId!,
+                  selectedPrinterId,
                   tasks,
                   columnTitle: levelTitle,
                   hierarchyPath: hierarchyPath,
                 )
               : await printColumn(
-                  selectedPrinterId!,
+                  selectedPrinterId,
                   tasks,
                   columnTitle: levelTitle,
                   hierarchyPath: hierarchyPath,
@@ -692,12 +692,12 @@ class PrinterService {
         case 'individual_slips':
           success = includeSubtasks
               ? await printIndividualSlipsWithSubtasks(
-                  selectedPrinterId!,
+                  selectedPrinterId,
                   tasks,
                   hierarchyPath: hierarchyPath ?? levelTitle,
                 )
               : await printIndividualSlips(
-                  selectedPrinterId!,
+                  selectedPrinterId,
                   tasks,
                   hierarchyPath: hierarchyPath ?? levelTitle,
                 );
@@ -705,13 +705,13 @@ class PrinterService {
         default:
           success = includeSubtasks
               ? await printColumnWithSubtasks(
-                  selectedPrinterId!,
+                  selectedPrinterId,
                   tasks,
                   columnTitle: levelTitle,
                   hierarchyPath: hierarchyPath,
                 )
               : await printColumn(
-                  selectedPrinterId!,
+                  selectedPrinterId,
                   tasks,
                   columnTitle: levelTitle,
                   hierarchyPath: hierarchyPath,

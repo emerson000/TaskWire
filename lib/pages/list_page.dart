@@ -7,7 +7,6 @@ import '../services/printer_service.dart';
 import '../repositories/printer_repository.dart';
 import '../widgets/desktop_column_view.dart';
 import '../widgets/mobile_drill_down_view.dart';
-import '../widgets/task_tile.dart';
 
 class ListPage extends StatefulWidget {
   const ListPage({super.key});
@@ -177,7 +176,7 @@ class _ListPageState extends State<ListPage> {
       body: isDesktop ? _buildDesktopView() : _buildMobileView(),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          _showAddTaskInline(_currentParent?.id?.toString(), _currentParent?.title, columnIndex: _currentColumnIndex);
+          _showAddTaskInline(_currentParent?.id.toString(), _currentParent?.title, columnIndex: _currentColumnIndex);
         },
         tooltip: 'Add Task',
         child: const Icon(Icons.add),

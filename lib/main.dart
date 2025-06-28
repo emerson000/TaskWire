@@ -86,7 +86,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currentThemeMode = themeMode ?? ThemeMode.system;
+    final currentThemeMode = themeMode;
     return MaterialApp(
       title: 'TaskWire',
       debugShowCheckedModeBanner: false,

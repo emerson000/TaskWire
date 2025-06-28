@@ -60,7 +60,6 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
   static const double _defaultColumnWidth = 350.0;
   static const double _minColumnWidth = 200.0;
   static const double _maxColumnWidth = 600.0;
-  bool _isLoadingWidths = true;
 
   @override
   void didUpdateWidget(covariant DesktopColumnView oldWidget) {
@@ -95,12 +94,8 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
       final savedWidths = await PreferenceService.getAllColumnWidths();
       setState(() {
         _columnWidths.addAll(savedWidths);
-        _isLoadingWidths = false;
       });
     } catch (e) {
-      setState(() {
-        _isLoadingWidths = false;
-      });
     }
   }
 
@@ -177,7 +172,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
   Future<void> _printColumn(Task? parent) async {
     try {
       final tasks = await widget.taskManager.getTasksAtLevel(
-        parent?.id?.toString(),
+        parent?.id.toString(),
       );
 
       final columnTitle = parent?.title ?? 'All Tasks';
@@ -220,7 +215,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
   Future<void> _printColumnWithSubtasks(Task? parent) async {
     try {
       final tasks = await widget.taskManager.getTasksAtLevel(
-        parent?.id?.toString(),
+        parent?.id.toString(),
       );
 
       final columnTitle = parent?.title ?? 'All Tasks';
@@ -263,7 +258,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
   Future<void> _printIndividualSlips(Task? parent) async {
     try {
       final tasks = await widget.taskManager.getTasksAtLevel(
-        parent?.id?.toString(),
+        parent?.id.toString(),
       );
 
       final columnIndex = _columnHierarchy.indexOf(parent);
@@ -304,7 +299,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
   Future<void> _printIndividualSlipsWithSubtasks(Task? parent) async {
     try {
       final tasks = await widget.taskManager.getTasksAtLevel(
-        parent?.id?.toString(),
+        parent?.id.toString(),
       );
 
       final columnIndex = _columnHierarchy.indexOf(parent);
@@ -417,7 +412,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
     for (int i = 0; i < _columnHierarchy.length; i++) {
       final parent = _columnHierarchy[i];
       final tasks = await widget.taskManager.getTasksAtLevel(
-        parent?.id?.toString(),
+        parent?.id.toString(),
       );
       final isLastColumn = i == _columnHierarchy.length - 1;
 
@@ -534,7 +529,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                       ? ZeroState(
                           parentTitle: parent?.title,
                           onAddTask: () => widget.onAddTask(
-                            parent?.id?.toString(),
+                            parent?.id.toString(),
                             parent?.title,
                             columnIndex: columnIndex,
                           ),
@@ -552,7 +547,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                                 widget.addTaskColumnIndex == columnIndex &&
                                 index == tasks.length) {
                               return AddTaskTile(
-                                parentId: parent?.id?.toString(),
+                                parentId: parent?.id.toString(),
                                 parentTitle: parent?.title,
                                 onAddTask: widget.onCreateTask,
                                 onCancel: widget.onHideAddTask,
@@ -668,7 +663,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
             icon: const Icon(Icons.add),
             onPressed: () => widget.onAddTask(
               null,
-              parent?.id?.toString(),
+              parent?.id.toString(),
               columnIndex: columnIndex,
             ),
             tooltip: parent != null

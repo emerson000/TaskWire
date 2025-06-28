@@ -61,7 +61,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
   Future<List<Task>>? _currentTasksFuture;
 
   Future<List<Task>> _getCurrentTasks() {
-    return widget.taskManager.getTasksAtLevel(_currentParent?.id?.toString());
+    return widget.taskManager.getTasksAtLevel(_currentParent?.id.toString());
   }
 
   void _refreshTasks() {
@@ -71,7 +71,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
   Future<void> _printCurrentLevel() async {
     try {
       final tasks = await widget.taskManager.getTasksAtLevel(
-        _currentParent?.id?.toString(),
+        _currentParent?.id.toString(),
       );
 
       final levelTitle = _currentParent?.title ?? 'All Tasks';
@@ -113,7 +113,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
   Future<void> _printCurrentLevelWithSubtasks() async {
     try {
       final tasks = await widget.taskManager.getTasksAtLevel(
-        _currentParent?.id?.toString(),
+        _currentParent?.id.toString(),
       );
 
       final levelTitle = _currentParent?.title ?? 'All Tasks';
@@ -155,7 +155,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
   Future<void> _printIndividualSlips() async {
     try {
       final tasks = await widget.taskManager.getTasksAtLevel(
-        _currentParent?.id?.toString(),
+        _currentParent?.id.toString(),
       );
 
       final hierarchyPath = _buildHierarchyPathForIndividualSlips();
@@ -195,7 +195,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
   Future<void> _printIndividualSlipsWithSubtasks() async {
     try {
       final tasks = await widget.taskManager.getTasksAtLevel(
-        _currentParent?.id?.toString(),
+        _currentParent?.id.toString(),
       );
 
       final hierarchyPath = _buildHierarchyPathForIndividualSlips();
@@ -432,7 +432,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
                     const SizedBox(width: 8),
                     TextButton.icon(
                       onPressed: () =>
-                          widget.onAddTask(_currentParent?.id?.toString(), _currentParent?.title, columnIndex: null),
+                          widget.onAddTask(_currentParent?.id.toString(), _currentParent?.title, columnIndex: null),
                       icon: const Icon(Icons.add, size: 16),
                       label: Text(
                         _currentParent != null ? 'Add Subtask' : 'Add Task',
@@ -458,22 +458,22 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
                         return const Center(child: CircularProgressIndicator());
                       }
                       final tasks = snapshot.data!;
-                      return tasks.isEmpty && !(widget.showAddTask && widget.addTaskParentId == _currentParent?.id?.toString())
+                      return tasks.isEmpty && !(widget.showAddTask && widget.addTaskParentId == _currentParent?.id.toString())
                           ? ZeroState(
                               parentTitle: _currentParent?.title,
                               onAddTask: () => widget.onAddTask(
-                                _currentParent?.id?.toString(),
+                                _currentParent?.id.toString(),
                                 _currentParent?.title,
                                 columnIndex: null,
                               ),
                               isDesktop: false,
                             )
                           : ListView.builder(
-                              itemCount: tasks.length + (widget.showAddTask && widget.addTaskParentId == _currentParent?.id?.toString() ? 1 : 0),
+                              itemCount: tasks.length + (widget.showAddTask && widget.addTaskParentId == _currentParent?.id.toString() ? 1 : 0),
                               itemBuilder: (context, index) {
-                                if (widget.showAddTask && widget.addTaskParentId == _currentParent?.id?.toString() && index == tasks.length) {
+                                if (widget.showAddTask && widget.addTaskParentId == _currentParent?.id.toString() && index == tasks.length) {
                                   return AddTaskTile(
-                                    parentId: _currentParent?.id?.toString(),
+                                    parentId: _currentParent?.id.toString(),
                                     parentTitle: _currentParent?.title,
                                     onAddTask: widget.onCreateTask,
                                     onCancel: widget.onHideAddTask,
