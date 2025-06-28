@@ -66,23 +66,20 @@ class _AppWrapperState extends State<AppWrapper> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: CircularProgressIndicator(),
-          ),
-        ),
+        home: Scaffold(body: Center(child: CircularProgressIndicator())),
       );
     }
-    
-    return MyApp(
-      themeMode: _themeMode,
-      onThemeModeChanged: toggleThemeMode,
-    );
+
+    return MyApp(themeMode: _themeMode, onThemeModeChanged: toggleThemeMode);
   }
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key, required this.themeMode, required this.onThemeModeChanged});
+  const MyApp({
+    super.key,
+    required this.themeMode,
+    required this.onThemeModeChanged,
+  });
 
   final ThemeMode themeMode;
   final VoidCallback onThemeModeChanged;
@@ -127,7 +124,12 @@ class MyApp extends StatelessWidget {
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title, required this.themeMode, required this.onThemeModeChanged});
+  const MyHomePage({
+    super.key,
+    required this.title,
+    required this.themeMode,
+    required this.onThemeModeChanged,
+  });
 
   // This widget is the home page of your application. It is stateful, meaning
   // that it has a State object (defined below) that contains fields that affect
@@ -179,72 +181,74 @@ class _MyHomePageState extends State<MyHomePage> {
         title: Text(widget.title),
       ),
       drawer: Drawer(
-        child: Column(
-          children: [
-            const SizedBox(height: 32),
-            ListTile(
-              leading: Icon(
-                Icons.list,
-                color: _selectedIndex == 0 ? Colors.deepPurple : null,
-              ),
-              title: Text(
-                'Tasks',
-                style: TextStyle(
+        child: SafeArea(
+          child: Column(
+            children: [
+              const SizedBox(height: 32),
+              ListTile(
+                leading: Icon(
+                  Icons.list,
                   color: _selectedIndex == 0 ? Colors.deepPurple : null,
-                  fontWeight: _selectedIndex == 0 ? FontWeight.bold : null,
                 ),
-              ),
-              selected: _selectedIndex == 0,
-              selectedTileColor: Colors.deepPurple.withOpacity(0.1),
-              onTap: () {
-                setState(() {
-                  _selectedIndex = 0;
-                });
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: Icon(
-                Icons.print,
-                color: _selectedIndex == 1 ? Colors.deepPurple : null,
-              ),
-              title: Text(
-                'Print Settings',
-                style: TextStyle(
-                  color: _selectedIndex == 1 ? Colors.deepPurple : null,
-                  fontWeight: _selectedIndex == 1 ? FontWeight.bold : null,
-                ),
-              ),
-              selected: _selectedIndex == 1,
-              selectedTileColor: Colors.deepPurple.withOpacity(0.1),
-              onTap: () {
-                setState(() {
-                  _selectedIndex = 1;
-                });
-                Navigator.pop(context);
-              },
-            ),
-            const Spacer(),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: IconButton(
-                  icon: Icon(
-                    widget.themeMode == ThemeMode.light
-                        ? Icons.light_mode
-                        : widget.themeMode == ThemeMode.dark
-                            ? Icons.dark_mode
-                            : Icons.brightness_auto,
+                title: Text(
+                  'Tasks',
+                  style: TextStyle(
+                    color: _selectedIndex == 0 ? Colors.deepPurple : null,
+                    fontWeight: _selectedIndex == 0 ? FontWeight.bold : null,
                   ),
-                  onPressed: () {
-                    widget.onThemeModeChanged();
-                  },
+                ),
+                selected: _selectedIndex == 0,
+                selectedTileColor: Colors.deepPurple.withOpacity(0.1),
+                onTap: () {
+                  setState(() {
+                    _selectedIndex = 0;
+                  });
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                leading: Icon(
+                  Icons.print,
+                  color: _selectedIndex == 1 ? Colors.deepPurple : null,
+                ),
+                title: Text(
+                  'Print Settings',
+                  style: TextStyle(
+                    color: _selectedIndex == 1 ? Colors.deepPurple : null,
+                    fontWeight: _selectedIndex == 1 ? FontWeight.bold : null,
+                  ),
+                ),
+                selected: _selectedIndex == 1,
+                selectedTileColor: Colors.deepPurple.withOpacity(0.1),
+                onTap: () {
+                  setState(() {
+                    _selectedIndex = 1;
+                  });
+                  Navigator.pop(context);
+                },
+              ),
+              const Spacer(),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: IconButton(
+                    icon: Icon(
+                      widget.themeMode == ThemeMode.light
+                          ? Icons.light_mode
+                          : widget.themeMode == ThemeMode.dark
+                          ? Icons.dark_mode
+                          : Icons.brightness_auto,
+                    ),
+                    onPressed: () {
+                      widget.onThemeModeChanged();
+                    },
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-          ],
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
       body: _buildBody(),
