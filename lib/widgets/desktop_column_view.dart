@@ -520,10 +520,10 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
           Expanded(
             child: DragTarget<Task>(
               onWillAcceptWithDetails: (details) => true,
-              onAccept: (draggedTask) {
+              onAcceptWithDetails: (details) {
                 try {
                   widget.taskManager.moveTaskToParent(
-                    draggedTask.id,
+                    details.data.id,
                     parent?.id,
                   );
                   setState(() {});
@@ -532,8 +532,8 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                     SnackBar(
                       content: Text(
                         parent != null
-                            ? '"${draggedTask.title}" moved to "${parent.title}"'
-                            : '"${draggedTask.title}" moved to root level',
+                            ? '"${details.data.title}" moved to "${parent.title}"'
+                            : '"${details.data.title}" moved to root level',
                       ),
                       duration: const Duration(seconds: 2),
                     ),
@@ -595,8 +595,8 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                             return DragTarget<Task>(
                               onWillAcceptWithDetails: (details) =>
                                   details.data.id != task.id,
-                              onAccept: (draggedTask) =>
-                                  _onTaskDrop(draggedTask, task),
+                              onAcceptWithDetails: (details) =>
+                                  _onTaskDrop(details.data, task),
                               builder: (context, candidateData, rejectedData) {
                                 return TaskTile(
                                   key: ValueKey(task.id),

@@ -80,7 +80,7 @@ class BreadcrumbNavigation extends StatelessWidget {
       if (onTaskDrop != null && !isLast) {
         breadcrumbItem = DragTarget<Task>(
           onWillAcceptWithDetails: (details) => true,
-          onAccept: (draggedTask) => onTaskDrop!(draggedTask, task),
+          onAcceptWithDetails: (details) => onTaskDrop!(details.data, task),
           builder: (context, candidateData, rejectedData) {
             return AnimatedContainer(
               duration: const Duration(milliseconds: 200),

@@ -503,8 +503,8 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
                                 return DragTarget<Task>(
                                   onWillAcceptWithDetails: (details) =>
                                       details.data.id != task.id,
-                                  onAccept: (draggedTask) =>
-                                      _onTaskDrop(draggedTask, task),
+                                  onAcceptWithDetails: (details) =>
+                                      _onTaskDrop(details.data, task),
                                   builder: (context, candidateData, rejectedData) {
                                     return TaskTile(
                                       key: ValueKey(task.id),
