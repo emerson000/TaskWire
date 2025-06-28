@@ -109,7 +109,7 @@ class TaskTile extends StatelessWidget {
 
   Widget _buildDragTarget(BuildContext context) {
     return DragTarget<Task>(
-      onWillAccept: (data) => data != null && data.id != task.id,
+      onWillAcceptWithDetails: (details) => details.data.id != task.id,
       onAccept: (draggedTask) {
         onDragAccept?.call(draggedTask);
       },

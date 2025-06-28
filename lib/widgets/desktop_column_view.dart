@@ -519,7 +519,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
           _buildColumnHeader(parent, columnIndex),
           Expanded(
             child: DragTarget<Task>(
-              onWillAccept: (data) => data != null,
+              onWillAcceptWithDetails: (details) => true,
               onAccept: (draggedTask) {
                 try {
                   widget.taskManager.moveTaskToParent(
@@ -593,8 +593,8 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                             final task = tasks[index];
                             final isSelected = _columnHierarchy.contains(task);
                             return DragTarget<Task>(
-                              onWillAccept: (data) =>
-                                  data != null && data.id != task.id,
+                              onWillAcceptWithDetails: (details) =>
+                                  details.data.id != task.id,
                               onAccept: (draggedTask) =>
                                   _onTaskDrop(draggedTask, task),
                               builder: (context, candidateData, rejectedData) {

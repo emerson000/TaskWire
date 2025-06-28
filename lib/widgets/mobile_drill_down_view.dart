@@ -409,7 +409,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
   @override
   Widget build(BuildContext context) {
     return DragTarget<Task>(
-      onWillAccept: (_) {
+      onWillAcceptWithDetails: (details) {
         if (!_isDragging) {
           setState(() {
             _isDragging = true;
@@ -501,8 +501,8 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
                                 
                                 final task = tasks[index];
                                 return DragTarget<Task>(
-                                  onWillAccept: (data) =>
-                                      data != null && data.id != task.id,
+                                  onWillAcceptWithDetails: (details) =>
+                                      details.data.id != task.id,
                                   onAccept: (draggedTask) =>
                                       _onTaskDrop(draggedTask, task),
                                   builder: (context, candidateData, rejectedData) {
