@@ -121,7 +121,7 @@ class TaskTile extends StatelessWidget {
                 ? Theme.of(context)
                     .colorScheme
                     .primaryContainer
-                    .withOpacity(0.3)
+                    .withValues(alpha: 0.3)
                 : null,
             borderRadius: BorderRadius.circular(8.0),
           ),

@@ -87,7 +87,7 @@ class BreadcrumbNavigation extends StatelessWidget {
               padding: const EdgeInsets.all(2.0),
               decoration: BoxDecoration(
                 color: candidateData.isNotEmpty
-                    ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3)
+                    ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3)
                     : null,
                 borderRadius: BorderRadius.circular(6.0),
                 border: candidateData.isNotEmpty

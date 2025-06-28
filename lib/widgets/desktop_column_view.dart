@@ -555,7 +555,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                     color: candidateData.isNotEmpty
                         ? Theme.of(
                             context,
-                          ).colorScheme.primaryContainer.withOpacity(0.1)
+                          ).colorScheme.primaryContainer.withValues(alpha: 0.1)
                         : null,
                   ),
                   child:
@@ -759,7 +759,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                       child: Container(
                         width: 1,
                         height: double.infinity,
-                        color: Theme.of(context).dividerColor.withOpacity(0.3),
+                        color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
                       ),
                     ),
                     Center(
@@ -773,7 +773,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                               : isHovered
                               ? Theme.of(
                                   context,
-                                ).colorScheme.primary.withOpacity(0.7)
+                                ).colorScheme.primary.withValues(alpha: 0.7)
                               : Theme.of(context).dividerColor,
                           borderRadius: BorderRadius.circular(1),
                         ),

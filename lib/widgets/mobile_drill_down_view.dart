@@ -465,7 +465,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
                   decoration: BoxDecoration(
                     color: Theme.of(
                       context,
-                    ).colorScheme.primaryContainer.withOpacity(0.1),
+                    ).colorScheme.primaryContainer.withValues(alpha: 0.1),
                   ),
                   child: FutureBuilder<List<Task>>(
                     future: _currentTasksFuture,
