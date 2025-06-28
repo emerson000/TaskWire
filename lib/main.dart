@@ -14,7 +14,6 @@ void main() async {
 
   final db = AppDatabase();
 
-  // Ensure database is properly initialized
   await db.close();
   final newDb = AppDatabase();
 
@@ -25,34 +24,50 @@ void main() async {
   );
   getIt.registerSingleton<PrinterRepository>(PrinterRepository(newDb));
 
-  runApp(const MyApp());
+  runApp(AppWrapper());
+}
+
+class AppWrapper extends StatefulWidget {
+  const AppWrapper({super.key});
+
+  @override
+  State<AppWrapper> createState() => _AppWrapperState();
+}
+
+class _AppWrapperState extends State<AppWrapper> {
+  ThemeMode _themeMode = ThemeMode.system;
+
+  void toggleThemeMode() {
+    setState(() {
+      final currentIndex = ThemeMode.values.indexOf(_themeMode);
+      final nextIndex = (currentIndex + 1) % ThemeMode.values.length;
+      _themeMode = ThemeMode.values[nextIndex];
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MyApp(
+      themeMode: _themeMode,
+      onThemeModeChanged: toggleThemeMode,
+    );
+  }
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({super.key, required this.themeMode, required this.onThemeModeChanged});
 
-  // This widget is the root of your application.
+  final ThemeMode themeMode;
+  final VoidCallback onThemeModeChanged;
+
   @override
   Widget build(BuildContext context) {
+    final currentThemeMode = themeMode ?? ThemeMode.system;
     return MaterialApp(
       title: 'TaskWire',
       debugShowCheckedModeBanner: false,
+      themeMode: currentThemeMode,
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         navigationDrawerTheme: NavigationDrawerThemeData(
           indicatorColor: Colors.deepPurple.withOpacity(0.1),
@@ -62,13 +77,30 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const MyHomePage(title: 'TaskWire'),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.deepPurple,
+          brightness: Brightness.dark,
+        ),
+        navigationDrawerTheme: NavigationDrawerThemeData(
+          indicatorColor: Colors.deepPurple.withOpacity(0.1),
+          tileHeight: 56,
+          indicatorShape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.zero,
+          ),
+        ),
+      ),
+      home: MyHomePage(
+        title: 'TaskWire',
+        themeMode: currentThemeMode,
+        onThemeModeChanged: onThemeModeChanged,
+      ),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+  const MyHomePage({super.key, required this.title, required this.themeMode, required this.onThemeModeChanged});
 
   // This widget is the home page of your application. It is stateful, meaning
   // that it has a State object (defined below) that contains fields that affect
@@ -80,6 +112,8 @@ class MyHomePage extends StatefulWidget {
   // always marked "final".
 
   final String title;
+  final ThemeMode themeMode;
+  final VoidCallback onThemeModeChanged;
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
@@ -117,40 +151,75 @@ class _MyHomePageState extends State<MyHomePage> {
         // the App.build method, and use it to set our appbar title.
         title: Text(widget.title),
       ),
-      drawer: NavigationDrawer(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: (int index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-          Navigator.pop(context);
-        },
-        children: [
-          NavigationDrawerDestination(
-            icon: Icon(
-              Icons.list,
-              color: _selectedIndex == 0 ? Colors.deepPurple : null,
-            ),
-            label: Text(
-              'Tasks',
-              style: TextStyle(
+      drawer: Drawer(
+        child: Column(
+          children: [
+            const SizedBox(height: 32),
+            ListTile(
+              leading: Icon(
+                Icons.list,
                 color: _selectedIndex == 0 ? Colors.deepPurple : null,
               ),
+              title: Text(
+                'Tasks',
+                style: TextStyle(
+                  color: _selectedIndex == 0 ? Colors.deepPurple : null,
+                  fontWeight: _selectedIndex == 0 ? FontWeight.bold : null,
+                ),
+              ),
+              selected: _selectedIndex == 0,
+              selectedTileColor: Colors.deepPurple.withOpacity(0.1),
+              onTap: () {
+                setState(() {
+                  _selectedIndex = 0;
+                });
+                Navigator.pop(context);
+              },
             ),
-          ),
-          NavigationDrawerDestination(
-            icon: Icon(
-              Icons.print,
-              color: _selectedIndex == 1 ? Colors.deepPurple : null,
-            ),
-            label: Text(
-              'Print Settings',
-              style: TextStyle(
+            ListTile(
+              leading: Icon(
+                Icons.print,
                 color: _selectedIndex == 1 ? Colors.deepPurple : null,
               ),
+              title: Text(
+                'Print Settings',
+                style: TextStyle(
+                  color: _selectedIndex == 1 ? Colors.deepPurple : null,
+                  fontWeight: _selectedIndex == 1 ? FontWeight.bold : null,
+                ),
+              ),
+              selected: _selectedIndex == 1,
+              selectedTileColor: Colors.deepPurple.withOpacity(0.1),
+              onTap: () {
+                setState(() {
+                  _selectedIndex = 1;
+                });
+                Navigator.pop(context);
+              },
             ),
-          ),
-        ],
+            const Spacer(),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
+              child: Divider(),
+            ),
+            ListTile(
+              leading: Icon(
+                widget.themeMode == ThemeMode.light
+                    ? Icons.light_mode
+                    : widget.themeMode == ThemeMode.dark
+                        ? Icons.dark_mode
+                        : Icons.brightness_auto,
+                color: _selectedIndex == 2 ? Colors.deepPurple : null,
+              ),
+              selected: _selectedIndex == 2,
+              selectedTileColor: Colors.deepPurple.withOpacity(0.1),
+              onTap: () {
+                widget.onThemeModeChanged();
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
       ),
       body: _buildBody(),
     );
