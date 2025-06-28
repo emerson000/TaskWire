@@ -47,7 +47,7 @@ class ZeroState extends StatelessWidget {
               const SizedBox(height: 6),
               Text(
                 parentTitle != null 
-                  ? 'Get started by adding subtasks to "${parentTitle}"'
+                  ? 'Get started by adding subtasks to "$parentTitle"'
                   : 'Create your first task to get organized',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.6),

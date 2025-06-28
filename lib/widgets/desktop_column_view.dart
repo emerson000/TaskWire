@@ -3,6 +3,7 @@ import '../models/task.dart';
 import '../services/task_manager.dart';
 import '../services/printer_service.dart';
 import '../services/preference_service.dart';
+import '../services/logging_service.dart';
 import 'task_tile.dart';
 import 'print_menu.dart';
 import 'zero_state.dart';
@@ -60,6 +61,8 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
   static const double _defaultColumnWidth = 350.0;
   static const double _minColumnWidth = 200.0;
   static const double _maxColumnWidth = 600.0;
+  final Map<int, bool> _resizeHandleHovered = <int, bool>{};
+  final Map<int, bool> _resizeHandleDragging = <int, bool>{};
 
   @override
   void didUpdateWidget(covariant DesktopColumnView oldWidget) {
@@ -96,6 +99,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
         _columnWidths.addAll(savedWidths);
       });
     } catch (e) {
+      LoggingService.error('Error loading column widths: $e');
     }
   }
 
@@ -510,7 +514,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
     required int columnIndex,
     required bool isLastColumn,
   }) {
-    return Container(
+    return SizedBox(
       width: _columnWidths[columnIndex] ?? _defaultColumnWidth,
       height: double.infinity,
       child: Column(
@@ -714,78 +718,69 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
   }
 
   Widget _buildResizeHandle(int columnIndex) {
-    return StatefulBuilder(
-      builder: (context, setLocalState) {
-        bool isHovered = false;
-        bool isDragging = false;
-
-        return MouseRegion(
-          cursor: SystemMouseCursors.resizeLeftRight,
-          onEnter: (_) => setLocalState(() => isHovered = true),
-          onExit: (_) => setLocalState(() => isHovered = false),
-          child: Tooltip(
-            message: 'Drag to resize • Double-click to reset',
-            child: GestureDetector(
-              onPanStart: (_) => setLocalState(() => isDragging = true),
-              onPanEnd: (_) {
-                setLocalState(() => isDragging = false);
-                final currentWidth =
-                    _columnWidths[columnIndex] ?? _defaultColumnWidth;
-                _saveColumnWidth(columnIndex, currentWidth);
-              },
-              onPanUpdate: (details) {
-                setState(() {
-                  final currentWidth =
-                      _columnWidths[columnIndex] ?? _defaultColumnWidth;
-                  final newWidth = (currentWidth + details.delta.dx).clamp(
-                    _minColumnWidth,
-                    _maxColumnWidth,
-                  );
-                  _columnWidths[columnIndex] = newWidth;
-                });
-              },
-              onDoubleTap: () {
-                setState(() {
-                  _columnWidths.remove(columnIndex);
-                  PreferenceService.clearColumnWidth(columnIndex);
-                });
-              },
-              child: Container(
-                width: 24,
-                color: Colors.transparent,
-                child: Stack(
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 1,
-                        height: double.infinity,
-                        color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    Center(
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 150),
-                        width: isDragging ? 3 : 2,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: isDragging
-                              ? Theme.of(context).colorScheme.primary
-                              : isHovered
-                              ? Theme.of(
-                                  context,
-                                ).colorScheme.primary.withValues(alpha: 0.7)
-                              : Theme.of(context).dividerColor,
-                          borderRadius: BorderRadius.circular(1),
-                        ),
-                      ),
-                    ),
-                  ],
+    return MouseRegion(
+      cursor: SystemMouseCursors.resizeLeftRight,
+      onEnter: (_) => setState(() => _resizeHandleHovered[columnIndex] = true),
+      onExit: (_) => setState(() => _resizeHandleHovered[columnIndex] = false),
+      child: Tooltip(
+        message: 'Drag to resize • Double-click to reset',
+        child: GestureDetector(
+          onPanStart: (_) => setState(() => _resizeHandleDragging[columnIndex] = true),
+          onPanEnd: (_) {
+            setState(() => _resizeHandleDragging[columnIndex] = false);
+            final currentWidth =
+                _columnWidths[columnIndex] ?? _defaultColumnWidth;
+            _saveColumnWidth(columnIndex, currentWidth);
+          },
+          onPanUpdate: (details) {
+            setState(() {
+              final currentWidth =
+                  _columnWidths[columnIndex] ?? _defaultColumnWidth;
+              final newWidth = (currentWidth + details.delta.dx).clamp(
+                _minColumnWidth,
+                _maxColumnWidth,
+              );
+              _columnWidths[columnIndex] = newWidth;
+            });
+          },
+          onDoubleTap: () {
+            setState(() {
+              _columnWidths.remove(columnIndex);
+              PreferenceService.clearColumnWidth(columnIndex);
+            });
+          },
+          child: Container(
+            width: 24,
+            color: Colors.transparent,
+            child: Stack(
+              children: [
+                Center(
+                  child: Container(
+                    width: 1,
+                    height: double.infinity,
+                    color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
+                  ),
                 ),
-              ),
+                Center(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    width: _resizeHandleDragging[columnIndex] == true ? 3 : 2,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: _resizeHandleHovered[columnIndex] == true
+                          ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.7)
+                          : _resizeHandleDragging[columnIndex] == true
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).dividerColor,
+                      borderRadius: BorderRadius.circular(1),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 

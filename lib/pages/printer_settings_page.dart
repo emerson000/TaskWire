@@ -87,7 +87,7 @@ class PrinterProvider extends ChangeNotifier {
 }
 
 class PrinterSettingsPage extends StatelessWidget {
-  const PrinterSettingsPage({Key? key}) : super(key: key);
+  const PrinterSettingsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
