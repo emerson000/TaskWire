@@ -1,8 +1,10 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/material.dart';
 
 class PreferenceService {
   static const String _columnWidthPrefix = 'column_width_';
   static const double _defaultColumnWidth = 350.0;
+  static const String _themeModeKey = 'theme_mode';
 
   static Future<void> saveColumnWidth(int columnIndex, double width) async {
     final prefs = await SharedPreferences.getInstance();
@@ -48,5 +50,27 @@ class PreferenceService {
         await prefs.remove(key);
       }
     }
+  }
+
+  static Future<void> saveThemeMode(ThemeMode themeMode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_themeModeKey, themeMode.name);
+  }
+
+  static Future<ThemeMode> getThemeMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    final themeModeString = prefs.getString(_themeModeKey);
+    if (themeModeString != null) {
+      return ThemeMode.values.firstWhere(
+        (mode) => mode.name == themeModeString,
+        orElse: () => ThemeMode.system,
+      );
+    }
+    return ThemeMode.system;
+  }
+
+  static Future<void> clearThemeMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_themeModeKey);
   }
 } 
