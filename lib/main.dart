@@ -86,7 +86,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currentThemeMode = themeMode ?? ThemeMode.system;
+    final currentThemeMode = themeMode;
     return MaterialApp(
       title: 'TaskWire',
       debugShowCheckedModeBanner: false,
@@ -94,7 +94,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         navigationDrawerTheme: NavigationDrawerThemeData(
-          indicatorColor: Colors.deepPurple.withOpacity(0.1),
+          indicatorColor: Colors.deepPurple.withValues(alpha: 0.1),
           tileHeight: 56,
           indicatorShape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.zero,
@@ -107,7 +107,7 @@ class MyApp extends StatelessWidget {
           brightness: Brightness.dark,
         ),
         navigationDrawerTheme: NavigationDrawerThemeData(
-          indicatorColor: Colors.deepPurple.withOpacity(0.1),
+          indicatorColor: Colors.deepPurple.withValues(alpha: 0.1),
           tileHeight: 56,
           indicatorShape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.zero,
@@ -198,7 +198,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
                 ),
                 selected: _selectedIndex == 0,
-                selectedTileColor: Colors.deepPurple.withOpacity(0.1),
+                selectedTileColor: Colors.deepPurple.withValues(alpha: 0.1),
                 onTap: () {
                   setState(() {
                     _selectedIndex = 0;
@@ -219,7 +219,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
                 ),
                 selected: _selectedIndex == 1,
-                selectedTileColor: Colors.deepPurple.withOpacity(0.1),
+                selectedTileColor: Colors.deepPurple.withValues(alpha: 0.1),
                 onTap: () {
                   setState(() {
                     _selectedIndex = 1;

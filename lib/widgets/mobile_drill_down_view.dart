@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import '../models/task.dart';
 import '../services/task_manager.dart';
 import '../services/printer_service.dart';
@@ -61,7 +60,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
   Future<List<Task>>? _currentTasksFuture;
 
   Future<List<Task>> _getCurrentTasks() {
-    return widget.taskManager.getTasksAtLevel(_currentParent?.id?.toString());
+    return widget.taskManager.getTasksAtLevel(_currentParent?.id.toString());
   }
 
   void _refreshTasks() {
@@ -71,8 +70,10 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
   Future<void> _printCurrentLevel() async {
     try {
       final tasks = await widget.taskManager.getTasksAtLevel(
-        _currentParent?.id?.toString(),
+        _currentParent?.id.toString(),
       );
+
+      if (!mounted) return;
 
       final levelTitle = _currentParent?.title ?? 'All Tasks';
       final hierarchyPath = _buildHierarchyPath();
@@ -84,6 +85,8 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
         context: context,
         printType: 'checklist',
       );
+
+      if (!mounted) return;
 
       if (result.success) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -101,6 +104,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
         );
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error printing level: $e'),
@@ -113,8 +117,10 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
   Future<void> _printCurrentLevelWithSubtasks() async {
     try {
       final tasks = await widget.taskManager.getTasksAtLevel(
-        _currentParent?.id?.toString(),
+        _currentParent?.id.toString(),
       );
+
+      if (!mounted) return;
 
       final levelTitle = _currentParent?.title ?? 'All Tasks';
       final hierarchyPath = _buildHierarchyPath();
@@ -127,6 +133,8 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
         printType: 'checklist',
       );
 
+      if (!mounted) return;
+
       if (result.success) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -143,6 +151,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
         );
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error printing level with subtasks: $e'),
@@ -155,8 +164,10 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
   Future<void> _printIndividualSlips() async {
     try {
       final tasks = await widget.taskManager.getTasksAtLevel(
-        _currentParent?.id?.toString(),
+        _currentParent?.id.toString(),
       );
+
+      if (!mounted) return;
 
       final hierarchyPath = _buildHierarchyPathForIndividualSlips();
       final result = await widget.printerService.printTasksWithPrinterSelection(
@@ -166,6 +177,8 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
         context: context,
         printType: 'individual_slips',
       );
+
+      if (!mounted) return;
 
       if (result.success) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -183,6 +196,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
         );
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error printing individual slips: $e'),
@@ -195,8 +209,10 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
   Future<void> _printIndividualSlipsWithSubtasks() async {
     try {
       final tasks = await widget.taskManager.getTasksAtLevel(
-        _currentParent?.id?.toString(),
+        _currentParent?.id.toString(),
       );
+
+      if (!mounted) return;
 
       final hierarchyPath = _buildHierarchyPathForIndividualSlips();
       final result = await widget.printerService.printTasksWithPrinterSelection(
@@ -206,6 +222,8 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
         context: context,
         printType: 'individual_slips',
       );
+
+      if (!mounted) return;
 
       if (result.success) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -223,6 +241,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
         );
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error printing individual slips with subtasks: $e'),
@@ -390,7 +409,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
   @override
   Widget build(BuildContext context) {
     return DragTarget<Task>(
-      onWillAccept: (_) {
+      onWillAcceptWithDetails: (details) {
         if (!_isDragging) {
           setState(() {
             _isDragging = true;
@@ -432,7 +451,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
                     const SizedBox(width: 8),
                     TextButton.icon(
                       onPressed: () =>
-                          widget.onAddTask(_currentParent?.id?.toString(), _currentParent?.title, columnIndex: null),
+                          widget.onAddTask(_currentParent?.id.toString(), _currentParent?.title, columnIndex: null),
                       icon: const Icon(Icons.add, size: 16),
                       label: Text(
                         _currentParent != null ? 'Add Subtask' : 'Add Task',
@@ -446,7 +465,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
                   decoration: BoxDecoration(
                     color: Theme.of(
                       context,
-                    ).colorScheme.primaryContainer.withOpacity(0.1),
+                    ).colorScheme.primaryContainer.withValues(alpha: 0.1),
                   ),
                   child: FutureBuilder<List<Task>>(
                     future: _currentTasksFuture,
@@ -458,22 +477,22 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
                         return const Center(child: CircularProgressIndicator());
                       }
                       final tasks = snapshot.data!;
-                      return tasks.isEmpty && !(widget.showAddTask && widget.addTaskParentId == _currentParent?.id?.toString())
+                      return tasks.isEmpty && !(widget.showAddTask && widget.addTaskParentId == _currentParent?.id.toString())
                           ? ZeroState(
                               parentTitle: _currentParent?.title,
                               onAddTask: () => widget.onAddTask(
-                                _currentParent?.id?.toString(),
+                                _currentParent?.id.toString(),
                                 _currentParent?.title,
                                 columnIndex: null,
                               ),
                               isDesktop: false,
                             )
                           : ListView.builder(
-                              itemCount: tasks.length + (widget.showAddTask && widget.addTaskParentId == _currentParent?.id?.toString() ? 1 : 0),
+                              itemCount: tasks.length + (widget.showAddTask && widget.addTaskParentId == _currentParent?.id.toString() ? 1 : 0),
                               itemBuilder: (context, index) {
-                                if (widget.showAddTask && widget.addTaskParentId == _currentParent?.id?.toString() && index == tasks.length) {
+                                if (widget.showAddTask && widget.addTaskParentId == _currentParent?.id.toString() && index == tasks.length) {
                                   return AddTaskTile(
-                                    parentId: _currentParent?.id?.toString(),
+                                    parentId: _currentParent?.id.toString(),
                                     parentTitle: _currentParent?.title,
                                     onAddTask: widget.onCreateTask,
                                     onCancel: widget.onHideAddTask,
@@ -482,10 +501,10 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
                                 
                                 final task = tasks[index];
                                 return DragTarget<Task>(
-                                  onWillAccept: (data) =>
-                                      data != null && data.id != task.id,
-                                  onAccept: (draggedTask) =>
-                                      _onTaskDrop(draggedTask, task),
+                                  onWillAcceptWithDetails: (details) =>
+                                      details.data.id != task.id,
+                                  onAcceptWithDetails: (details) =>
+                                      _onTaskDrop(details.data, task),
                                   builder: (context, candidateData, rejectedData) {
                                     return TaskTile(
                                       key: ValueKey(task.id),

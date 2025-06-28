@@ -1,9 +1,10 @@
 import 'dart:io';
+import 'lib/services/logging_service.dart';
 
 void main() async {
   final pubspecFile = File('pubspec.yaml');
   if (!await pubspecFile.exists()) {
-    print('Error: pubspec.yaml not found');
+    LoggingService.error('Error: pubspec.yaml not found');
     exit(1);
   }
 
@@ -12,7 +13,7 @@ void main() async {
   final match = versionRegex.firstMatch(content);
   
   if (match == null) {
-    print('Error: Could not find version in pubspec.yaml');
+    LoggingService.error('Error: Could not find version in pubspec.yaml');
     exit(1);
   }
 
@@ -26,5 +27,5 @@ void main() async {
   );
 
   await pubspecFile.writeAsString(newContent);
-  print('Incremented build number to $newBuildNumber');
+  LoggingService.info('Incremented build number to $newBuildNumber');
 } 

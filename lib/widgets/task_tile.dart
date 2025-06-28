@@ -109,9 +109,9 @@ class TaskTile extends StatelessWidget {
 
   Widget _buildDragTarget(BuildContext context) {
     return DragTarget<Task>(
-      onWillAccept: (data) => data != null && data.id != task.id,
-      onAccept: (draggedTask) {
-        onDragAccept?.call(draggedTask);
+      onWillAcceptWithDetails: (details) => details.data.id != task.id,
+      onAcceptWithDetails: (details) {
+        onDragAccept?.call(details.data);
       },
       builder: (context, candidateData, rejectedData) {
         return AnimatedContainer(
@@ -121,7 +121,7 @@ class TaskTile extends StatelessWidget {
                 ? Theme.of(context)
                     .colorScheme
                     .primaryContainer
-                    .withOpacity(0.3)
+                    .withValues(alpha: 0.3)
                 : null,
             borderRadius: BorderRadius.circular(8.0),
           ),
@@ -261,15 +261,15 @@ class TaskTile extends StatelessWidget {
   }
 
   Widget _buildEditingTile(BuildContext context) {
-    void handleKeyEvent(RawKeyEvent event) {
-      if (event is RawKeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
+    void handleKeyEvent(KeyEvent event) {
+      if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
         onEditCancel?.call();
       }
     }
 
-    return RawKeyboardListener(
+    return KeyboardListener(
       focusNode: FocusNode(),
-      onKey: handleKeyEvent,
+      onKeyEvent: handleKeyEvent,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         child: Row(
@@ -386,17 +386,17 @@ class _AddTaskTileState extends State<AddTaskTile> {
     widget.onCancel?.call();
   }
 
-  void _handleKeyEvent(RawKeyEvent event) {
-    if (event is RawKeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
+  void _handleKeyEvent(KeyEvent event) {
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
       _cancel();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return RawKeyboardListener(
+    return KeyboardListener(
       focusNode: FocusNode(),
-      onKey: _handleKeyEvent,
+      onKeyEvent: _handleKeyEvent,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         child: Row(

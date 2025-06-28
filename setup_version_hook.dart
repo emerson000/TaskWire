@@ -1,9 +1,10 @@
 import 'dart:io';
+import 'lib/services/logging_service.dart';
 
 void main() async {
   final hooksDir = Directory('.git/hooks');
   if (!await hooksDir.exists()) {
-    print('Error: .git/hooks directory not found');
+    LoggingService.error('Error: .git/hooks directory not found');
     exit(1);
   }
 
@@ -15,9 +16,9 @@ void main() async {
   if (!Platform.isWindows) {
     final result = await Process.run('chmod', ['+x', '.git/hooks/pre-commit']);
     if (result.exitCode != 0) {
-      print('Warning: Failed to make hook executable: ${result.stderr}');
+      LoggingService.warning('Warning: Failed to make hook executable: ${result.stderr}');
     }
   }
 
-  print('Version increment hook installed successfully!');
+  LoggingService.info('Version increment hook installed successfully!');
 } 

@@ -3,6 +3,7 @@ import '../models/task.dart';
 import '../services/task_manager.dart';
 import '../services/printer_service.dart';
 import '../services/preference_service.dart';
+import '../services/logging_service.dart';
 import 'task_tile.dart';
 import 'print_menu.dart';
 import 'zero_state.dart';
@@ -60,7 +61,8 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
   static const double _defaultColumnWidth = 350.0;
   static const double _minColumnWidth = 200.0;
   static const double _maxColumnWidth = 600.0;
-  bool _isLoadingWidths = true;
+  final Map<int, bool> _resizeHandleHovered = <int, bool>{};
+  final Map<int, bool> _resizeHandleDragging = <int, bool>{};
 
   @override
   void didUpdateWidget(covariant DesktopColumnView oldWidget) {
@@ -95,12 +97,9 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
       final savedWidths = await PreferenceService.getAllColumnWidths();
       setState(() {
         _columnWidths.addAll(savedWidths);
-        _isLoadingWidths = false;
       });
     } catch (e) {
-      setState(() {
-        _isLoadingWidths = false;
-      });
+      LoggingService.error('Error loading column widths: $e');
     }
   }
 
@@ -177,12 +176,15 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
   Future<void> _printColumn(Task? parent) async {
     try {
       final tasks = await widget.taskManager.getTasksAtLevel(
-        parent?.id?.toString(),
+        parent?.id.toString(),
       );
 
       final columnTitle = parent?.title ?? 'All Tasks';
       final columnIndex = _columnHierarchy.indexOf(parent);
       final hierarchyPath = _buildHierarchyPath(columnIndex);
+      
+      if (!mounted) return;
+      
       final result = await widget.printerService.printTasksWithPrinterSelection(
         tasks: tasks,
         levelTitle: columnTitle,
@@ -193,39 +195,48 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
       );
 
       if (result.success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result.successMessage!),
-            backgroundColor: Colors.green,
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.successMessage!),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
       } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.errorMessage!),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result.errorMessage!),
+            content: Text('Error printing column: $e'),
             backgroundColor: Colors.red,
           ),
         );
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error printing column: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
     }
   }
 
   Future<void> _printColumnWithSubtasks(Task? parent) async {
     try {
       final tasks = await widget.taskManager.getTasksAtLevel(
-        parent?.id?.toString(),
+        parent?.id.toString(),
       );
 
       final columnTitle = parent?.title ?? 'All Tasks';
       final columnIndex = _columnHierarchy.indexOf(parent);
       final hierarchyPath = _buildHierarchyPath(columnIndex);
+      
+      if (!mounted) return;
+      
       final result = await widget.printerService.printTasksWithPrinterSelection(
         tasks: tasks,
         levelTitle: columnTitle,
@@ -236,38 +247,47 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
       );
 
       if (result.success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result.successMessage!),
-            backgroundColor: Colors.green,
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.successMessage!),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
       } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.errorMessage!),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result.errorMessage!),
+            content: Text('Error printing column with subtasks: $e'),
             backgroundColor: Colors.red,
           ),
         );
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error printing column with subtasks: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
     }
   }
 
   Future<void> _printIndividualSlips(Task? parent) async {
     try {
       final tasks = await widget.taskManager.getTasksAtLevel(
-        parent?.id?.toString(),
+        parent?.id.toString(),
       );
 
       final columnIndex = _columnHierarchy.indexOf(parent);
       final hierarchyPath = _buildHierarchyPathForIndividualSlips(columnIndex);
+      
+      if (!mounted) return;
+      
       final result = await widget.printerService.printTasksWithPrinterSelection(
         tasks: tasks,
         levelTitle: hierarchyPath,
@@ -277,38 +297,47 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
       );
 
       if (result.success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result.successMessage!),
-            backgroundColor: Colors.green,
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.successMessage!),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
       } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.errorMessage!),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result.errorMessage!),
+            content: Text('Error printing individual slips: $e'),
             backgroundColor: Colors.red,
           ),
         );
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error printing individual slips: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
     }
   }
 
   Future<void> _printIndividualSlipsWithSubtasks(Task? parent) async {
     try {
       final tasks = await widget.taskManager.getTasksAtLevel(
-        parent?.id?.toString(),
+        parent?.id.toString(),
       );
 
       final columnIndex = _columnHierarchy.indexOf(parent);
       final hierarchyPath = _buildHierarchyPathForIndividualSlips(columnIndex);
+      
+      if (!mounted) return;
+      
       final result = await widget.printerService.printTasksWithPrinterSelection(
         tasks: tasks,
         levelTitle: hierarchyPath,
@@ -318,27 +347,33 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
       );
 
       if (result.success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result.successMessage!),
-            backgroundColor: Colors.green,
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.successMessage!),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
       } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.errorMessage!),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result.errorMessage!),
+            content: Text('Error printing individual slips with subtasks: $e'),
             backgroundColor: Colors.red,
           ),
         );
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error printing individual slips with subtasks: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
     }
   }
 
@@ -417,7 +452,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
     for (int i = 0; i < _columnHierarchy.length; i++) {
       final parent = _columnHierarchy[i];
       final tasks = await widget.taskManager.getTasksAtLevel(
-        parent?.id?.toString(),
+        parent?.id.toString(),
       );
       final isLastColumn = i == _columnHierarchy.length - 1;
 
@@ -479,7 +514,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
     required int columnIndex,
     required bool isLastColumn,
   }) {
-    return Container(
+    return SizedBox(
       width: _columnWidths[columnIndex] ?? _defaultColumnWidth,
       height: double.infinity,
       child: Column(
@@ -488,11 +523,11 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
           _buildColumnHeader(parent, columnIndex),
           Expanded(
             child: DragTarget<Task>(
-              onWillAccept: (data) => data != null,
-              onAccept: (draggedTask) {
+              onWillAcceptWithDetails: (details) => true,
+              onAcceptWithDetails: (details) {
                 try {
                   widget.taskManager.moveTaskToParent(
-                    draggedTask.id,
+                    details.data.id,
                     parent?.id,
                   );
                   setState(() {});
@@ -501,8 +536,8 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                     SnackBar(
                       content: Text(
                         parent != null
-                            ? '"${draggedTask.title}" moved to "${parent.title}"'
-                            : '"${draggedTask.title}" moved to root level',
+                            ? '"${details.data.title}" moved to "${parent.title}"'
+                            : '"${details.data.title}" moved to root level',
                       ),
                       duration: const Duration(seconds: 2),
                     ),
@@ -524,7 +559,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                     color: candidateData.isNotEmpty
                         ? Theme.of(
                             context,
-                          ).colorScheme.primaryContainer.withOpacity(0.1)
+                          ).colorScheme.primaryContainer.withValues(alpha: 0.1)
                         : null,
                   ),
                   child:
@@ -534,7 +569,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                       ? ZeroState(
                           parentTitle: parent?.title,
                           onAddTask: () => widget.onAddTask(
-                            parent?.id?.toString(),
+                            parent?.id.toString(),
                             parent?.title,
                             columnIndex: columnIndex,
                           ),
@@ -552,7 +587,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                                 widget.addTaskColumnIndex == columnIndex &&
                                 index == tasks.length) {
                               return AddTaskTile(
-                                parentId: parent?.id?.toString(),
+                                parentId: parent?.id.toString(),
                                 parentTitle: parent?.title,
                                 onAddTask: widget.onCreateTask,
                                 onCancel: widget.onHideAddTask,
@@ -562,10 +597,10 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                             final task = tasks[index];
                             final isSelected = _columnHierarchy.contains(task);
                             return DragTarget<Task>(
-                              onWillAccept: (data) =>
-                                  data != null && data.id != task.id,
-                              onAccept: (draggedTask) =>
-                                  _onTaskDrop(draggedTask, task),
+                              onWillAcceptWithDetails: (details) =>
+                                  details.data.id != task.id,
+                              onAcceptWithDetails: (details) =>
+                                  _onTaskDrop(details.data, task),
                               builder: (context, candidateData, rejectedData) {
                                 return TaskTile(
                                   key: ValueKey(task.id),
@@ -668,7 +703,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
             icon: const Icon(Icons.add),
             onPressed: () => widget.onAddTask(
               null,
-              parent?.id?.toString(),
+              parent?.id.toString(),
               columnIndex: columnIndex,
             ),
             tooltip: parent != null
@@ -683,78 +718,69 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
   }
 
   Widget _buildResizeHandle(int columnIndex) {
-    return StatefulBuilder(
-      builder: (context, setLocalState) {
-        bool isHovered = false;
-        bool isDragging = false;
-
-        return MouseRegion(
-          cursor: SystemMouseCursors.resizeLeftRight,
-          onEnter: (_) => setLocalState(() => isHovered = true),
-          onExit: (_) => setLocalState(() => isHovered = false),
-          child: Tooltip(
-            message: 'Drag to resize • Double-click to reset',
-            child: GestureDetector(
-              onPanStart: (_) => setLocalState(() => isDragging = true),
-              onPanEnd: (_) {
-                setLocalState(() => isDragging = false);
-                final currentWidth =
-                    _columnWidths[columnIndex] ?? _defaultColumnWidth;
-                _saveColumnWidth(columnIndex, currentWidth);
-              },
-              onPanUpdate: (details) {
-                setState(() {
-                  final currentWidth =
-                      _columnWidths[columnIndex] ?? _defaultColumnWidth;
-                  final newWidth = (currentWidth + details.delta.dx).clamp(
-                    _minColumnWidth,
-                    _maxColumnWidth,
-                  );
-                  _columnWidths[columnIndex] = newWidth;
-                });
-              },
-              onDoubleTap: () {
-                setState(() {
-                  _columnWidths.remove(columnIndex);
-                  PreferenceService.clearColumnWidth(columnIndex);
-                });
-              },
-              child: Container(
-                width: 24,
-                color: Colors.transparent,
-                child: Stack(
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 1,
-                        height: double.infinity,
-                        color: Theme.of(context).dividerColor.withOpacity(0.3),
-                      ),
-                    ),
-                    Center(
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 150),
-                        width: isDragging ? 3 : 2,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: isDragging
-                              ? Theme.of(context).colorScheme.primary
-                              : isHovered
-                              ? Theme.of(
-                                  context,
-                                ).colorScheme.primary.withOpacity(0.7)
-                              : Theme.of(context).dividerColor,
-                          borderRadius: BorderRadius.circular(1),
-                        ),
-                      ),
-                    ),
-                  ],
+    return MouseRegion(
+      cursor: SystemMouseCursors.resizeLeftRight,
+      onEnter: (_) => setState(() => _resizeHandleHovered[columnIndex] = true),
+      onExit: (_) => setState(() => _resizeHandleHovered[columnIndex] = false),
+      child: Tooltip(
+        message: 'Drag to resize • Double-click to reset',
+        child: GestureDetector(
+          onPanStart: (_) => setState(() => _resizeHandleDragging[columnIndex] = true),
+          onPanEnd: (_) {
+            setState(() => _resizeHandleDragging[columnIndex] = false);
+            final currentWidth =
+                _columnWidths[columnIndex] ?? _defaultColumnWidth;
+            _saveColumnWidth(columnIndex, currentWidth);
+          },
+          onPanUpdate: (details) {
+            setState(() {
+              final currentWidth =
+                  _columnWidths[columnIndex] ?? _defaultColumnWidth;
+              final newWidth = (currentWidth + details.delta.dx).clamp(
+                _minColumnWidth,
+                _maxColumnWidth,
+              );
+              _columnWidths[columnIndex] = newWidth;
+            });
+          },
+          onDoubleTap: () {
+            setState(() {
+              _columnWidths.remove(columnIndex);
+              PreferenceService.clearColumnWidth(columnIndex);
+            });
+          },
+          child: Container(
+            width: 24,
+            color: Colors.transparent,
+            child: Stack(
+              children: [
+                Center(
+                  child: Container(
+                    width: 1,
+                    height: double.infinity,
+                    color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
+                  ),
                 ),
-              ),
+                Center(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    width: _resizeHandleDragging[columnIndex] == true ? 3 : 2,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: _resizeHandleHovered[columnIndex] == true
+                          ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.7)
+                          : _resizeHandleDragging[columnIndex] == true
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).dividerColor,
+                      borderRadius: BorderRadius.circular(1),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
