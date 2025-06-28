@@ -4,6 +4,7 @@ import '../main.dart';
 import '../models/task.dart';
 import '../services/task_manager.dart';
 import '../services/printer_service.dart';
+import '../services/logging_service.dart';
 import '../repositories/printer_repository.dart';
 import '../widgets/desktop_column_view.dart';
 import '../widgets/mobile_drill_down_view.dart';
@@ -68,7 +69,7 @@ class _ListPageState extends State<ListPage> {
       });
     } catch (e) {
       if (kDebugMode) {
-        print('Error creating task: $e');
+        LoggingService.error('Error creating task: $e');
       }
     }
   }

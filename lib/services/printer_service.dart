@@ -1,6 +1,7 @@
 import 'package:taskwire/models/printer.dart';
 import 'package:taskwire/models/task.dart';
 import 'package:taskwire/repositories/printer_repository.dart';
+import 'package:taskwire/services/logging_service.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:print_usb/print_usb.dart';
 import 'package:flutter_esc_pos_network/flutter_esc_pos_network.dart';
@@ -77,7 +78,7 @@ class PrinterService {
           )
           .toList();
     } catch (e) {
-      print('Error scanning USB printers on Android: $e');
+      LoggingService.error('Error scanning USB printers on Android: $e');
       return [];
     }
   }
@@ -96,7 +97,7 @@ class PrinterService {
           )
           .toList();
     } catch (e) {
-      print('Error scanning USB printers: $e');
+      LoggingService.error('Error scanning USB printers: $e');
       return [];
     }
   }
@@ -155,7 +156,7 @@ class PrinterService {
         }
       } else if (printer.type == PrinterType.network) {
         if (!_isValidIpAddress(printer.address)) {
-          print('Invalid IP address: ${printer.address}');
+          LoggingService.warning('Invalid IP address: ${printer.address}');
           return false;
         }
 
@@ -174,14 +175,14 @@ class PrinterService {
             await _repository.updatePrinter(printer);
             return true;
           } else {
-            print('Failed to connect to network printer: ${connectResult.msg}');
+            LoggingService.error('Failed to connect to network printer: ${connectResult.msg}');
             _networkPrinters.remove(printerId);
             printer.isConnected = false;
             await _repository.updatePrinter(printer);
             return false;
           }
         } catch (e) {
-          print('Error connecting to network printer: $e');
+          LoggingService.error('Error connecting to network printer: $e');
           _networkPrinters.remove(printerId);
           printer.isConnected = false;
           await _repository.updatePrinter(printer);
@@ -194,7 +195,7 @@ class PrinterService {
       await _repository.updatePrinter(printer);
       return true;
     } catch (e) {
-      print('Error connecting to printer: $e');
+      LoggingService.error('Error connecting to printer: $e');
       return false;
     }
   }
@@ -259,7 +260,7 @@ class PrinterService {
           await Future.delayed(const Duration(seconds: 1));
           return success;
         } catch (e) {
-          print('Network printer error: $e');
+          LoggingService.error('Network printer error: $e');
           if (!keepConnected) {
             try {
               networkPrinter.disconnect();
@@ -267,7 +268,7 @@ class PrinterService {
               printer.isConnected = false;
               await _repository.updatePrinter(printer);
             } catch (disconnectError) {
-              print('Error disconnecting after print: $disconnectError');
+              LoggingService.error('Error disconnecting after print: $disconnectError');
             }
           }
 
@@ -280,7 +281,7 @@ class PrinterService {
       }
       return false;
     } catch (e) {
-      print('Error printing job: $e');
+      LoggingService.error('Error printing job: $e');
       return false;
     }
   }
@@ -290,7 +291,7 @@ class PrinterService {
       final testBytes = await _generateTestReceiptBytes();
       return await printJob(printerId, testBytes);
     } catch (e) {
-      print('Error in test print: $e');
+      LoggingService.error('Error in test print: $e');
       return false;
     }
   }
@@ -305,7 +306,7 @@ class PrinterService {
       final columnBytes = await _generateColumnReceiptBytes(tasks, columnTitle, hierarchyPath);
       return await printJob(printerId, columnBytes);
     } catch (e) {
-      print('Error in print column: $e');
+      LoggingService.error('Error in print column: $e');
       return false;
     }
   }
@@ -324,7 +325,7 @@ class PrinterService {
       );
       return await printJob(printerId, columnBytes);
     } catch (e) {
-      print('Error in print column with subtasks: $e');
+      LoggingService.error('Error in print column with subtasks: $e');
       return false;
     }
   }
@@ -352,7 +353,7 @@ class PrinterService {
 
       return await printJob(printerId, allBytes);
     } catch (e) {
-      print('Error in print individual slips: $e');
+      LoggingService.error('Error in print individual slips: $e');
       return false;
     }
   }
@@ -380,7 +381,7 @@ class PrinterService {
 
       return await printJob(printerId, allBytes);
     } catch (e) {
-      print('Error in print individual slips with subtasks: $e');
+      LoggingService.error('Error in print individual slips with subtasks: $e');
       return false;
     }
   }
@@ -613,7 +614,7 @@ class PrinterService {
           try {
             networkPrinter.disconnect();
           } catch (e) {
-            print('Error disconnecting network printer: $e');
+            LoggingService.error('Error disconnecting network printer: $e');
           }
           _networkPrinters.remove(printerId);
         }
@@ -622,7 +623,7 @@ class PrinterService {
       printer.isConnected = false;
       await _repository.updatePrinter(printer);
     } catch (e) {
-      print('Error disconnecting printer: $e');
+      LoggingService.error('Error disconnecting printer: $e');
     }
   }
 
@@ -631,7 +632,7 @@ class PrinterService {
       try {
         networkPrinter.disconnect();
       } catch (e) {
-        print('Error disposing network printer: $e');
+        LoggingService.error('Error disposing network printer: $e');
       }
     }
     _networkPrinters.clear();
