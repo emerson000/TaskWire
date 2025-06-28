@@ -659,6 +659,13 @@ class PrinterService {
       if (printers.length == 1) {
         selectedPrinterId = printers.first.id;
       } else {
+        if (!context.mounted) {
+          return PrintResult(
+            success: false,
+            errorMessage: 'Widget was disposed before printer selection.',
+            errorType: PrintErrorType.cancelled,
+          );
+        }
         selectedPrinterId = await _showPrinterSelectionDialog(
           context,
           printers,
@@ -670,6 +677,14 @@ class PrinterService {
             errorType: PrintErrorType.cancelled,
           );
         }
+      }
+
+      if (!context.mounted) {
+        return PrintResult(
+          success: false,
+          errorMessage: 'Widget was disposed during printer selection.',
+          errorType: PrintErrorType.cancelled,
+        );
       }
 
       bool success;

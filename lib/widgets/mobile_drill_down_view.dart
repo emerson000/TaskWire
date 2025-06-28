@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import '../models/task.dart';
 import '../services/task_manager.dart';
 import '../services/printer_service.dart';
@@ -74,6 +73,8 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
         _currentParent?.id.toString(),
       );
 
+      if (!mounted) return;
+
       final levelTitle = _currentParent?.title ?? 'All Tasks';
       final hierarchyPath = _buildHierarchyPath();
       final result = await widget.printerService.printTasksWithPrinterSelection(
@@ -84,6 +85,8 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
         context: context,
         printType: 'checklist',
       );
+
+      if (!mounted) return;
 
       if (result.success) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -101,6 +104,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
         );
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error printing level: $e'),
@@ -116,6 +120,8 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
         _currentParent?.id.toString(),
       );
 
+      if (!mounted) return;
+
       final levelTitle = _currentParent?.title ?? 'All Tasks';
       final hierarchyPath = _buildHierarchyPath();
       final result = await widget.printerService.printTasksWithPrinterSelection(
@@ -126,6 +132,8 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
         context: context,
         printType: 'checklist',
       );
+
+      if (!mounted) return;
 
       if (result.success) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -143,6 +151,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
         );
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error printing level with subtasks: $e'),
@@ -158,6 +167,8 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
         _currentParent?.id.toString(),
       );
 
+      if (!mounted) return;
+
       final hierarchyPath = _buildHierarchyPathForIndividualSlips();
       final result = await widget.printerService.printTasksWithPrinterSelection(
         tasks: tasks,
@@ -166,6 +177,8 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
         context: context,
         printType: 'individual_slips',
       );
+
+      if (!mounted) return;
 
       if (result.success) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -183,6 +196,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
         );
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error printing individual slips: $e'),
@@ -198,6 +212,8 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
         _currentParent?.id.toString(),
       );
 
+      if (!mounted) return;
+
       final hierarchyPath = _buildHierarchyPathForIndividualSlips();
       final result = await widget.printerService.printTasksWithPrinterSelection(
         tasks: tasks,
@@ -206,6 +222,8 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
         context: context,
         printType: 'individual_slips',
       );
+
+      if (!mounted) return;
 
       if (result.success) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -223,6 +241,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
         );
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error printing individual slips with subtasks: $e'),

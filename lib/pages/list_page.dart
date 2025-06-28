@@ -102,7 +102,9 @@ class _ListPageState extends State<ListPage> {
     final task = await _taskManager.findTaskById(taskId);
     if (task == null) return;
 
-    showDialog(
+    if (!mounted) return;
+
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Task'),
@@ -113,18 +115,19 @@ class _ListPageState extends State<ListPage> {
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () async {
-              await _taskManager.deleteTask(taskId);
-              setState(() {
-                _refreshCounter++;
-              });
-              Navigator.pop(context);
-            },
+            onPressed: () => Navigator.pop(context, true),
             child: const Text('Delete'),
           ),
         ],
       ),
     );
+
+    if (confirmed == true) {
+      await _taskManager.deleteTask(taskId);
+      setState(() {
+        _refreshCounter++;
+      });
+    }
   }
 
   void _startEditing(Task task) {

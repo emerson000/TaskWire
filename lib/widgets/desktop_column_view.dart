@@ -178,6 +178,9 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
       final columnTitle = parent?.title ?? 'All Tasks';
       final columnIndex = _columnHierarchy.indexOf(parent);
       final hierarchyPath = _buildHierarchyPath(columnIndex);
+      
+      if (!mounted) return;
+      
       final result = await widget.printerService.printTasksWithPrinterSelection(
         tasks: tasks,
         levelTitle: columnTitle,
@@ -227,6 +230,9 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
       final columnTitle = parent?.title ?? 'All Tasks';
       final columnIndex = _columnHierarchy.indexOf(parent);
       final hierarchyPath = _buildHierarchyPath(columnIndex);
+      
+      if (!mounted) return;
+      
       final result = await widget.printerService.printTasksWithPrinterSelection(
         tasks: tasks,
         levelTitle: columnTitle,
@@ -275,6 +281,9 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
 
       final columnIndex = _columnHierarchy.indexOf(parent);
       final hierarchyPath = _buildHierarchyPathForIndividualSlips(columnIndex);
+      
+      if (!mounted) return;
+      
       final result = await widget.printerService.printTasksWithPrinterSelection(
         tasks: tasks,
         levelTitle: hierarchyPath,
@@ -322,6 +331,9 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
 
       final columnIndex = _columnHierarchy.indexOf(parent);
       final hierarchyPath = _buildHierarchyPathForIndividualSlips(columnIndex);
+      
+      if (!mounted) return;
+      
       final result = await widget.printerService.printTasksWithPrinterSelection(
         tasks: tasks,
         levelTitle: hierarchyPath,
