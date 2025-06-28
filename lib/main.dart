@@ -225,24 +225,23 @@ class _MyHomePageState extends State<MyHomePage> {
               },
             ),
             const Spacer(),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: Divider(),
-            ),
-            ListTile(
-              leading: Icon(
-                widget.themeMode == ThemeMode.light
-                    ? Icons.light_mode
-                    : widget.themeMode == ThemeMode.dark
-                        ? Icons.dark_mode
-                        : Icons.brightness_auto,
-                color: _selectedIndex == 2 ? Colors.deepPurple : null,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: IconButton(
+                  icon: Icon(
+                    widget.themeMode == ThemeMode.light
+                        ? Icons.light_mode
+                        : widget.themeMode == ThemeMode.dark
+                            ? Icons.dark_mode
+                            : Icons.brightness_auto,
+                  ),
+                  onPressed: () {
+                    widget.onThemeModeChanged();
+                  },
+                ),
               ),
-              selected: _selectedIndex == 2,
-              selectedTileColor: Colors.deepPurple.withOpacity(0.1),
-              onTap: () {
-                widget.onThemeModeChanged();
-              },
             ),
             const SizedBox(height: 16),
           ],
