@@ -258,15 +258,15 @@ class TaskTile extends StatelessWidget {
   }
 
   Widget _buildEditingTile(BuildContext context) {
-    void handleKeyEvent(RawKeyEvent event) {
-      if (event is RawKeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
+    void handleKeyEvent(KeyEvent event) {
+      if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
         onEditCancel?.call();
       }
     }
 
-    return RawKeyboardListener(
+    return KeyboardListener(
       focusNode: FocusNode(),
-      onKey: handleKeyEvent,
+      onKeyEvent: handleKeyEvent,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         child: Row(
@@ -383,17 +383,17 @@ class _AddTaskTileState extends State<AddTaskTile> {
     widget.onCancel?.call();
   }
 
-  void _handleKeyEvent(RawKeyEvent event) {
-    if (event is RawKeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
+  void _handleKeyEvent(KeyEvent event) {
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
       _cancel();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return RawKeyboardListener(
+    return KeyboardListener(
       focusNode: FocusNode(),
-      onKey: _handleKeyEvent,
+      onKeyEvent: _handleKeyEvent,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         child: Row(
