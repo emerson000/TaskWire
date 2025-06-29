@@ -485,12 +485,6 @@ class _AddTaskTileState extends State<AddTaskTile> {
     widget.onCancel?.call();
   }
 
-  void _handleKeyEvent(KeyEvent event) {
-    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
-      _cancel();
-    }
-  }
-
   void _handleTextFieldKeyEvent(KeyEvent event) {
     if (event is KeyDownEvent) {
       if (event.logicalKey == LogicalKeyboardKey.enter && !HardwareKeyboard.instance.isShiftPressed) {
