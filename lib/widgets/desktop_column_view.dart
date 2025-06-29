@@ -75,8 +75,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
   void didUpdateWidget(covariant DesktopColumnView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.refreshKey != oldWidget.refreshKey) {
-      _tasksCache.clear();
-      _isTasksLoading.clear();
+      _clearAllCaches();
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         await _validateAndCleanupHierarchy();
         if (mounted) {
@@ -460,6 +459,11 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
 
     try {
       widget.taskManager.moveTaskToParent(draggedTask.id, targetTask.id);
+      
+      // Clear caches for affected parents to ensure fresh data is loaded
+      _clearCacheForParent(draggedTask.parentId);
+      _clearCacheForParent(targetTask.id);
+      
       setState(() {});
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -487,9 +491,19 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
 
     for (int i = 0; i < _columnHierarchy.length; i++) {
       final parent = _columnHierarchy[i];
-      final tasks = await widget.taskManager.getTasksAtLevel(
-        parent?.id.toString(),
-      );
+      
+      // Use cached data if available, otherwise fetch fresh data
+      List<Task> tasks;
+      if (_tasksCache.containsKey(parent?.id)) {
+        tasks = _tasksCache[parent?.id]!;
+      } else {
+        tasks = await widget.taskManager.getTasksAtLevel(
+          parent?.id.toString(),
+        );
+        // Cache the fetched data
+        _tasksCache[parent?.id] = tasks;
+      }
+      
       final isLastColumn = i == _columnHierarchy.length - 1;
 
       columns.add(
@@ -566,6 +580,11 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                     details.data.id,
                     parent?.id,
                   );
+                  
+                  // Clear caches for affected parents to ensure fresh data is loaded
+                  _clearCacheForParent(details.data.parentId);
+                  _clearCacheForParent(parent?.id);
+                  
                   setState(() {});
 
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -909,5 +928,15 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
       final currentIndex = _columnHierarchy.length - 1;
       widget.onColumnChange?.call(currentParent, currentIndex);
     }
+  }
+
+  void _clearAllCaches() {
+    _tasksCache.clear();
+    _isTasksLoading.clear();
+  }
+
+  void _clearCacheForParent(int? parentId) {
+    _tasksCache.remove(parentId);
+    _isTasksLoading.remove(parentId);
   }
 }
