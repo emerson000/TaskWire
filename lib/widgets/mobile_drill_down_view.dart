@@ -236,6 +236,11 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView>
   }
 
   void _onTaskDrop(Task draggedTask, Task targetTask) async {
+    if (await _wouldCreateRecursion(draggedTask, targetTask)) {
+      _showRecursionError();
+      return;
+    }
+    
     await handleTaskDrop(
       draggedTask: draggedTask,
       targetTask: targetTask,
@@ -244,11 +249,47 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView>
   }
 
   void _onBreadcrumbDrop(Task draggedTask, Task? targetParent) async {
+    if (await _wouldCreateRecursion(draggedTask, targetParent)) {
+      _showRecursionError();
+      return;
+    }
+    
     await handleParentDrop(
       draggedTask: draggedTask,
       targetParent: targetParent,
       onRefresh: () => setState(() {}),
     );
+  }
+
+  Future<bool> _wouldCreateRecursion(Task draggedTask, Task? targetParent) async {
+    if (targetParent == null) return false;
+    if (draggedTask.id == targetParent.id) return true;
+    
+    var currentParent = targetParent;
+    while (currentParent.parentId != null) {
+      if (currentParent.parentId == draggedTask.id) {
+        return true;
+      }
+      final parent = await widget.taskManager.findTaskById(currentParent.parentId!);
+      if (parent == null) break;
+      currentParent = parent;
+    }
+    
+    return false;
+  }
+
+  void _showRecursionError() {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Cannot move task: would create a circular reference',
+          ),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   @override
