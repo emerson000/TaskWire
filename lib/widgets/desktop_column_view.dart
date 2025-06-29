@@ -70,14 +70,18 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
 
   final Map<int?, List<Task>> _tasksCache = {};
   final Map<int?, bool> _isTasksLoading = {};
+  List<Widget>? _cachedColumns;
+  bool _isLoadingColumns = false;
 
   @override
   void didUpdateWidget(covariant DesktopColumnView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.refreshKey != oldWidget.refreshKey) {
       _clearAllCaches();
+      _cachedColumns = null;
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         await _validateAndCleanupHierarchy();
+        await _rebuildColumns();
         if (mounted) {
           setState(() {});
         }
@@ -97,6 +101,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
     _loadColumnWidths();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       widget.onColumnChange?.call(null, 0);
+      _rebuildColumns();
     });
   }
 
@@ -180,6 +185,9 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
 
     widget.onColumnChange?.call(parentTask, _columnHierarchy.length - 1);
 
+    // Rebuild columns for new hierarchy
+    _invalidateColumns();
+
     if (existingIndex == -1) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Future.delayed(const Duration(milliseconds: 50), () {
@@ -202,6 +210,9 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
     });
     final currentParent = _columnHierarchy[columnIndex];
     widget.onColumnChange?.call(currentParent, columnIndex);
+    
+    // Rebuild columns for new hierarchy
+    _invalidateColumns();
   }
 
   void _resetColumnWidths() {
@@ -464,7 +475,8 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
       _clearCacheForParent(draggedTask.parentId);
       _clearCacheForParent(targetTask.id);
       
-      setState(() {});
+      // Rebuild columns with fresh data
+      _invalidateColumns();
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -525,6 +537,11 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
 
   @override
   Widget build(BuildContext context) {
+    // Initialize columns if not yet built
+    if (_cachedColumns == null && !_isLoadingColumns) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _rebuildColumns());
+    }
+
     return SafeArea(
       child: Row(
         children: [
@@ -535,21 +552,12 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
               child: SingleChildScrollView(
                 controller: _scrollController,
                 scrollDirection: Axis.horizontal,
-                child: FutureBuilder<List<Widget>>(
-                  future: _buildColumns(),
-                  builder: (context, snapshot) {
-                    if (snapshot.hasError) {
-                      return Center(child: Text('Error: ${snapshot.error}'));
-                    }
-                    if (!snapshot.hasData) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: snapshot.data!,
-                    );
-                  },
-                ),
+                child: _isLoadingColumns || _cachedColumns == null
+                    ? const Center(child: CircularProgressIndicator())
+                    : Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: _cachedColumns!,
+                      ),
               ),
             ),
           ),
@@ -585,7 +593,8 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                   _clearCacheForParent(details.data.parentId);
                   _clearCacheForParent(parent?.id);
                   
-                  setState(() {});
+                  // Rebuild columns with fresh data
+                  _invalidateColumns();
 
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -716,13 +725,16 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
 
                             final taskToMove = taskList[oldIndex];
 
-                            setState(() {
-                              final newTaskList = List<Task>.from(taskList);
-                              newTaskList.removeAt(oldIndex);
-                              newTaskList.insert(newIndex, taskToMove);
-                              _tasksCache[parent?.id] = newTaskList;
-                            });
+                            // Optimistic update: immediately update cache and rebuild columns
+                            final newTaskList = List<Task>.from(taskList);
+                            newTaskList.removeAt(oldIndex);
+                            newTaskList.insert(newIndex, taskToMove);
+                            _tasksCache[parent?.id] = newTaskList;
+                            
+                            // Immediately rebuild columns with new order
+                            _rebuildColumnsSync();
 
+                            // Update database in background
                             widget.taskManager
                                 .reorderTaskInList(
                               parent?.id,
@@ -736,13 +748,15 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                               LoggingService.error(
                                   'Failed to reorder task: $e');
                               if (mounted) {
+                                // Revert to database state on error
+                                _clearCacheForParent(parent?.id);
+                                _invalidateColumns();
                                 ScaffoldMessenger.of(context)
                                     .showSnackBar(SnackBar(
                                   content: const Text(
                                       'Error updating order'),
                                   backgroundColor: Colors.red,
                                 ));
-                                _fetchTasksForColumn(parent?.id);
                               }
                             });
                           },
@@ -933,10 +947,77 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
   void _clearAllCaches() {
     _tasksCache.clear();
     _isTasksLoading.clear();
+    _cachedColumns = null;
   }
 
   void _clearCacheForParent(int? parentId) {
     _tasksCache.remove(parentId);
     _isTasksLoading.remove(parentId);
+  }
+
+  Future<void> _rebuildColumns() async {
+    if (_isLoadingColumns) return;
+    
+    setState(() {
+      _isLoadingColumns = true;
+    });
+
+    try {
+      final columns = await _buildColumns();
+      if (mounted) {
+        setState(() {
+          _cachedColumns = columns;
+          _isLoadingColumns = false;
+        });
+      }
+    } catch (e) {
+      LoggingService.error('Error building columns: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingColumns = false;
+        });
+      }
+    }
+  }
+
+  void _invalidateColumns() {
+    _cachedColumns = null;
+    _rebuildColumns();
+  }
+
+  void _rebuildColumnsSync() {
+    // Synchronous rebuild using cached data only
+    try {
+      final columns = <Widget>[];
+
+      for (int i = 0; i < _columnHierarchy.length; i++) {
+        final parent = _columnHierarchy[i];
+        
+        // Only use cached data for sync rebuild
+        if (_tasksCache.containsKey(parent?.id)) {
+          final tasks = _tasksCache[parent?.id]!;
+          final isLastColumn = i == _columnHierarchy.length - 1;
+
+          columns.add(
+            _buildColumn(
+              tasks: tasks,
+              parent: parent,
+              columnIndex: i,
+              isLastColumn: isLastColumn,
+            ),
+          );
+
+          if (!isLastColumn) {
+            columns.add(_buildResizeHandle(i));
+          }
+        }
+      }
+
+      setState(() {
+        _cachedColumns = columns;
+      });
+    } catch (e) {
+      LoggingService.error('Error in sync column rebuild: $e');
+    }
   }
 }
