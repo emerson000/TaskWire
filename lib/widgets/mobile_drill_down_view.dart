@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import '../models/task.dart';
 import '../services/task_manager.dart';
 import '../services/printer_service.dart';
-import 'task_tile.dart';
 import 'breadcrumb_navigation.dart';
 import 'print_menu.dart';
-import 'zero_state.dart';
+import 'task_view_mixin.dart';
+import 'shared_task_list.dart';
 
 class MobileDrillDownView extends StatefulWidget {
   final TaskManager taskManager;
@@ -55,11 +55,18 @@ class MobileDrillDownView extends StatefulWidget {
   State<MobileDrillDownView> createState() => _MobileDrillDownViewState();
 }
 
-class _MobileDrillDownViewState extends State<MobileDrillDownView> {
+class _MobileDrillDownViewState extends State<MobileDrillDownView> 
+    with TaskViewMixin {
   Task? _currentParent;
   List<Task?> _breadcrumbs = [null];
   bool _isDragging = false;
   Future<List<Task>>? _currentTasksFuture;
+
+  @override
+  TaskManager get taskManager => widget.taskManager;
+
+  @override
+  PrinterService get printerService => widget.printerService;
 
   Future<List<Task>> _getCurrentTasks() {
     return widget.taskManager.getTasksAtLevel(_currentParent?.id.toString());
@@ -70,229 +77,42 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
   }
 
   Future<void> _printCurrentLevel() async {
-    try {
-      final tasks = await widget.taskManager.getTasksAtLevel(
-        _currentParent?.id.toString(),
-      );
-
-      if (!mounted) return;
-
-      final levelTitle = _currentParent?.title ?? 'All Tasks';
-      final hierarchyPath = _buildHierarchyPath();
-      final result = await widget.printerService.printTasksWithPrinterSelection(
-        tasks: tasks,
-        levelTitle: levelTitle,
-        hierarchyPath: hierarchyPath,
-        includeSubtasks: false,
-        context: context,
-        printType: 'checklist',
-      );
-
-      if (!mounted) return;
-
-      if (result.success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result.successMessage!),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result.errorMessage!),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error printing level: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+    await printLevel(
+      parent: _currentParent,
+      hierarchyPath: buildHierarchyPath(_breadcrumbs),
+      includeSubtasks: false,
+      printType: 'checklist',
+    );
   }
 
   Future<void> _printCurrentLevelWithSubtasks() async {
-    try {
-      final tasks = await widget.taskManager.getTasksAtLevel(
-        _currentParent?.id.toString(),
-      );
-
-      if (!mounted) return;
-
-      final levelTitle = _currentParent?.title ?? 'All Tasks';
-      final hierarchyPath = _buildHierarchyPath();
-      final result = await widget.printerService.printTasksWithPrinterSelection(
-        tasks: tasks,
-        levelTitle: levelTitle,
-        hierarchyPath: hierarchyPath,
-        includeSubtasks: true,
-        context: context,
-        printType: 'checklist',
-      );
-
-      if (!mounted) return;
-
-      if (result.success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result.successMessage!),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result.errorMessage!),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error printing level with subtasks: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+    await printLevel(
+      parent: _currentParent,
+      hierarchyPath: buildHierarchyPath(_breadcrumbs),
+      includeSubtasks: true,
+      printType: 'checklist',
+    );
   }
 
   Future<void> _printIndividualSlips() async {
-    try {
-      final tasks = await widget.taskManager.getTasksAtLevel(
-        _currentParent?.id.toString(),
-      );
-
-      if (!mounted) return;
-
-      final hierarchyPath = _buildHierarchyPathForIndividualSlips();
-      final result = await widget.printerService.printTasksWithPrinterSelection(
-        tasks: tasks,
-        levelTitle: hierarchyPath,
-        includeSubtasks: false,
-        context: context,
-        printType: 'individual_slips',
-      );
-
-      if (!mounted) return;
-
-      if (result.success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result.successMessage!),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result.errorMessage!),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error printing individual slips: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+    await printLevel(
+      parent: _currentParent,
+      hierarchyPath: buildHierarchyPath(_breadcrumbs, includeCurrentLevel: true),
+      includeSubtasks: false,
+      printType: 'individual_slips',
+    );
   }
 
   Future<void> _printIndividualSlipsWithSubtasks() async {
-    try {
-      final tasks = await widget.taskManager.getTasksAtLevel(
-        _currentParent?.id.toString(),
-      );
-
-      if (!mounted) return;
-
-      final hierarchyPath = _buildHierarchyPathForIndividualSlips();
-      final result = await widget.printerService.printTasksWithPrinterSelection(
-        tasks: tasks,
-        levelTitle: hierarchyPath,
-        includeSubtasks: true,
-        context: context,
-        printType: 'individual_slips',
-      );
-
-      if (!mounted) return;
-
-      if (result.success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result.successMessage!),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result.errorMessage!),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error printing individual slips with subtasks: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+    await printLevel(
+      parent: _currentParent,
+      hierarchyPath: buildHierarchyPath(_breadcrumbs, includeCurrentLevel: true),
+      includeSubtasks: true,
+      printType: 'individual_slips',
+    );
   }
 
-  String _buildHierarchyPath() {
-    if (_currentParent == null) {
-      return 'All Tasks';
-    }
-    
-    final pathParts = <String>[];
-    
-    for (int i = 0; i < _breadcrumbs.length - 1; i++) {
-      final task = _breadcrumbs[i];
-      if (task != null) {
-        pathParts.add(task.title);
-      }
-    }
-    
-    if (pathParts.isEmpty) {
-      return 'All Tasks';
-    }
-    
-    return pathParts.join(' > ');
-  }
 
-  String _buildHierarchyPathForIndividualSlips() {
-    if (_currentParent == null) {
-      return 'All Tasks';
-    }
-    
-    final pathParts = <String>[];
-    
-    for (final task in _breadcrumbs) {
-      if (task != null) {
-        pathParts.add(task.title);
-      }
-    }
-    
-    if (pathParts.isEmpty) {
-      return 'All Tasks';
-    }
-    
-    return pathParts.join(' > ');
-  }
 
   @override
   void initState() {
@@ -338,74 +158,19 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
   }
 
   void _onTaskDrop(Task draggedTask, Task targetTask) async {
-    if (draggedTask.id == targetTask.id) return;
-
-    try {
-      await widget.taskManager.moveTaskToParent(draggedTask.id, targetTask.id);
-
-      if (mounted) {
-        setState(() {
-          _refreshTasks();
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              '"${draggedTask.title}" moved to "${targetTask.title}"',
-            ),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Cannot move task: ${e.toString().replaceAll('ArgumentError: ', '')}',
-            ),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
-    }
+    await handleTaskDrop(
+      draggedTask: draggedTask,
+      targetTask: targetTask,
+      onRefresh: () => setState(() => _refreshTasks()),
+    );
   }
 
   void _onBreadcrumbDrop(Task draggedTask, Task? targetParent) async {
-    try {
-      await widget.taskManager.moveTaskToParent(
-        draggedTask.id,
-        targetParent?.id,
-      );
-
-      if (mounted) {
-        setState(() {
-          _refreshTasks();
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              targetParent != null
-                  ? '"${draggedTask.title}" moved to "${targetParent.title}"'
-                  : '"${draggedTask.title}" moved to root level',
-            ),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Cannot move task: ${e.toString().replaceAll('ArgumentError: ', '')}',
-            ),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
-    }
+    await handleParentDrop(
+      draggedTask: draggedTask,
+      targetParent: targetParent,
+      onRefresh: () => setState(() => _refreshTasks()),
+    );
   }
 
   @override
@@ -479,58 +244,26 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
                         return const Center(child: CircularProgressIndicator());
                       }
                       final tasks = snapshot.data!;
-                      return tasks.isEmpty && !(widget.showAddTask && widget.addTaskParentId == _currentParent?.id.toString())
-                          ? ZeroState(
-                              parentTitle: _currentParent?.title,
-                              onAddTask: () => widget.onAddTask(
-                                _currentParent?.id.toString(),
-                                _currentParent?.title,
-                                columnIndex: null,
-                              ),
-                              isDesktop: false,
-                            )
-                          : ListView.builder(
-                              itemCount: tasks.length + (widget.showAddTask && widget.addTaskParentId == _currentParent?.id.toString() ? 1 : 0),
-                              itemBuilder: (context, index) {
-                                if (widget.showAddTask && widget.addTaskParentId == _currentParent?.id.toString() && index == tasks.length) {
-                                  return AddTaskTile(
-                                    parentId: _currentParent?.id.toString(),
-                                    parentTitle: _currentParent?.title,
-                                    onAddTask: widget.onCreateTask,
-                                    onAddMultipleTasks: widget.onAddMultipleTasks,
-                                    onCancel: widget.onHideAddTask,
-                                  );
-                                }
-                                
-                                final task = tasks[index];
-                                return DragTarget<Task>(
-                                  onWillAcceptWithDetails: (details) =>
-                                      details.data.id != task.id,
-                                  onAcceptWithDetails: (details) =>
-                                      _onTaskDrop(details.data, task),
-                                  builder: (context, candidateData, rejectedData) {
-                                    return TaskTile(
-                                      key: ValueKey(task.id),
-                                      task: task,
-                                      isEditing: widget.editingTaskId == task.id,
-                                      editController: widget.editController,
-                                      onTap: () => _navigateToSubtasks(task),
-                                      onEdit: () => widget.onStartEditing(task),
-                                      onDelete: () => widget.onDeleteTask(task.id),
-                                      onCheckboxChanged: (_) => widget.onUpdateTask(
-                                        task.id,
-                                        isCompleted: !task.isCompleted,
-                                      ),
-                                      onEditComplete: widget.onFinishEditing,
-                                      onEditCancel: widget.onEditCancel,
-                                      isDragTarget: candidateData.isNotEmpty,
-                                      onDragAccept: (draggedTask) =>
-                                          _onTaskDrop(draggedTask, task),
-                                    );
-                                  },
-                                );
-                              },
-                            );
+                      return SharedTaskList(
+                        tasks: tasks,
+                        parent: _currentParent,
+                        editingTaskId: widget.editingTaskId,
+                        editController: widget.editController,
+                        showAddTask: widget.showAddTask,
+                        addTaskParentId: widget.addTaskParentId,
+                        onTaskTap: _navigateToSubtasks,
+                        onStartEditing: widget.onStartEditing,
+                        onDeleteTask: widget.onDeleteTask,
+                        onUpdateTask: widget.onUpdateTask,
+                        onFinishEditing: widget.onFinishEditing,
+                        onEditCancel: widget.onEditCancel,
+                        onTaskDrop: _onTaskDrop,
+                        onCreateTask: widget.onCreateTask,
+                        onAddMultipleTasks: widget.onAddMultipleTasks,
+                        onHideAddTask: widget.onHideAddTask,
+                        onAddTask: widget.onAddTask,
+                        isDesktop: false,
+                      );
                     },
                   ),
                 ),

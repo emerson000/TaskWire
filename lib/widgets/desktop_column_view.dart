@@ -4,9 +4,9 @@ import '../services/task_manager.dart';
 import '../services/printer_service.dart';
 import '../services/preference_service.dart';
 import '../services/logging_service.dart';
-import 'task_tile.dart';
 import 'print_menu.dart';
-import 'zero_state.dart';
+import 'task_view_mixin.dart';
+import 'shared_task_list.dart';
 
 class DesktopColumnView extends StatefulWidget {
   final TaskManager taskManager;
@@ -56,7 +56,8 @@ class DesktopColumnView extends StatefulWidget {
   State<DesktopColumnView> createState() => _DesktopColumnViewState();
 }
 
-class _DesktopColumnViewState extends State<DesktopColumnView> {
+class _DesktopColumnViewState extends State<DesktopColumnView> 
+    with TaskViewMixin {
   List<Task?> _columnHierarchy = [null];
   final ScrollController _scrollController = ScrollController();
   final Map<int, double> _columnWidths = <int, double>{};
@@ -65,6 +66,12 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
   static const double _maxColumnWidth = 600.0;
   final Map<int, bool> _resizeHandleHovered = <int, bool>{};
   final Map<int, bool> _resizeHandleDragging = <int, bool>{};
+
+  @override
+  TaskManager get taskManager => widget.taskManager;
+
+  @override
+  PrinterService get printerService => widget.printerService;
 
   @override
   void didUpdateWidget(covariant DesktopColumnView oldWidget) {
@@ -176,276 +183,61 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
   }
 
   Future<void> _printColumn(Task? parent) async {
-    try {
-      final tasks = await widget.taskManager.getTasksAtLevel(
-        parent?.id.toString(),
-      );
-
-      final columnTitle = parent?.title ?? 'All Tasks';
-      final columnIndex = _columnHierarchy.indexOf(parent);
-      final hierarchyPath = _buildHierarchyPath(columnIndex);
-      
-      if (!mounted) return;
-      
-      final result = await widget.printerService.printTasksWithPrinterSelection(
-        tasks: tasks,
-        levelTitle: columnTitle,
-        hierarchyPath: hierarchyPath,
-        includeSubtasks: false,
-        context: context,
-        printType: 'checklist',
-      );
-
-      if (result.success) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result.successMessage!),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result.errorMessage!),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error printing column: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
+    final columnIndex = _columnHierarchy.indexOf(parent);
+    await printLevel(
+      parent: parent,
+      hierarchyPath: buildHierarchyPath(_columnHierarchy.sublist(0, columnIndex + 1)),
+      includeSubtasks: false,
+      printType: 'checklist',
+    );
   }
 
   Future<void> _printColumnWithSubtasks(Task? parent) async {
-    try {
-      final tasks = await widget.taskManager.getTasksAtLevel(
-        parent?.id.toString(),
-      );
-
-      final columnTitle = parent?.title ?? 'All Tasks';
-      final columnIndex = _columnHierarchy.indexOf(parent);
-      final hierarchyPath = _buildHierarchyPath(columnIndex);
-      
-      if (!mounted) return;
-      
-      final result = await widget.printerService.printTasksWithPrinterSelection(
-        tasks: tasks,
-        levelTitle: columnTitle,
-        hierarchyPath: hierarchyPath,
-        includeSubtasks: true,
-        context: context,
-        printType: 'checklist',
-      );
-
-      if (result.success) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result.successMessage!),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result.errorMessage!),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error printing column with subtasks: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
+    final columnIndex = _columnHierarchy.indexOf(parent);
+    await printLevel(
+      parent: parent,
+      hierarchyPath: buildHierarchyPath(_columnHierarchy.sublist(0, columnIndex + 1)),
+      includeSubtasks: true,
+      printType: 'checklist',
+    );
   }
 
   Future<void> _printIndividualSlips(Task? parent) async {
-    try {
-      final tasks = await widget.taskManager.getTasksAtLevel(
-        parent?.id.toString(),
-      );
-
-      final columnIndex = _columnHierarchy.indexOf(parent);
-      final hierarchyPath = _buildHierarchyPathForIndividualSlips(columnIndex);
-      
-      if (!mounted) return;
-      
-      final result = await widget.printerService.printTasksWithPrinterSelection(
-        tasks: tasks,
-        levelTitle: hierarchyPath,
-        includeSubtasks: false,
-        context: context,
-        printType: 'individual_slips',
-      );
-
-      if (result.success) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result.successMessage!),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result.errorMessage!),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error printing individual slips: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
+    final columnIndex = _columnHierarchy.indexOf(parent);
+    await printLevel(
+      parent: parent,
+      hierarchyPath: buildHierarchyPath(_columnHierarchy.sublist(0, columnIndex + 1), includeCurrentLevel: true),
+      includeSubtasks: false,
+      printType: 'individual_slips',
+    );
   }
 
   Future<void> _printIndividualSlipsWithSubtasks(Task? parent) async {
-    try {
-      final tasks = await widget.taskManager.getTasksAtLevel(
-        parent?.id.toString(),
-      );
-
-      final columnIndex = _columnHierarchy.indexOf(parent);
-      final hierarchyPath = _buildHierarchyPathForIndividualSlips(columnIndex);
-      
-      if (!mounted) return;
-      
-      final result = await widget.printerService.printTasksWithPrinterSelection(
-        tasks: tasks,
-        levelTitle: hierarchyPath,
-        includeSubtasks: true,
-        context: context,
-        printType: 'individual_slips',
-      );
-
-      if (result.success) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result.successMessage!),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result.errorMessage!),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error printing individual slips with subtasks: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
+    final columnIndex = _columnHierarchy.indexOf(parent);
+    await printLevel(
+      parent: parent,
+      hierarchyPath: buildHierarchyPath(_columnHierarchy.sublist(0, columnIndex + 1), includeCurrentLevel: true),
+      includeSubtasks: true,
+      printType: 'individual_slips',
+    );
   }
 
-  String _buildHierarchyPath(int columnIndex) {
-    if (columnIndex < 0 || columnIndex >= _columnHierarchy.length) {
-      return 'All Tasks';
-    }
 
-    final pathParts = <String>[];
 
-    for (int i = 0; i < columnIndex; i++) {
-      final task = _columnHierarchy[i];
-      if (task != null) {
-        pathParts.add(task.title);
-      }
-    }
-
-    if (pathParts.isEmpty) {
-      return 'All Tasks';
-    }
-
-    return pathParts.join(' > ');
+  void _onTaskDrop(Task draggedTask, Task targetTask) async {
+    await handleTaskDrop(
+      draggedTask: draggedTask,
+      targetTask: targetTask,
+      onRefresh: () => setState(() {}),
+    );
   }
 
-  String _buildHierarchyPathForIndividualSlips(int columnIndex) {
-    if (columnIndex < 0 || columnIndex >= _columnHierarchy.length) {
-      return 'All Tasks';
-    }
-
-    final pathParts = <String>[];
-
-    for (int i = 0; i <= columnIndex; i++) {
-      final task = _columnHierarchy[i];
-      if (task != null) {
-        pathParts.add(task.title);
-      }
-    }
-
-    if (pathParts.isEmpty) {
-      return 'All Tasks';
-    }
-
-    return pathParts.join(' > ');
-  }
-
-  void _onTaskDrop(Task draggedTask, Task targetTask) {
-    if (draggedTask.id == targetTask.id) return;
-
-    try {
-      widget.taskManager.moveTaskToParent(draggedTask.id, targetTask.id);
-      setState(() {});
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '"${draggedTask.title}" moved to "${targetTask.title}"',
-          ),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Cannot move task: ${e.toString().replaceAll('ArgumentError: ', '')}',
-          ),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
-    }
+  void _onParentDrop(Task draggedTask, Task? targetParent) async {
+    await handleParentDrop(
+      draggedTask: draggedTask,
+      targetParent: targetParent,
+      onRefresh: () => setState(() {}),
+    );
   }
 
   Future<List<Widget>> _buildColumns() async {
@@ -526,35 +318,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
           Expanded(
             child: DragTarget<Task>(
               onWillAcceptWithDetails: (details) => true,
-              onAcceptWithDetails: (details) {
-                try {
-                  widget.taskManager.moveTaskToParent(
-                    details.data.id,
-                    parent?.id,
-                  );
-                  setState(() {});
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        parent != null
-                            ? '"${details.data.title}" moved to "${parent.title}"'
-                            : '"${details.data.title}" moved to root level',
-                      ),
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Cannot move task: ${e.toString().replaceAll('ArgumentError: ', '')}',
-                      ),
-                      backgroundColor: Theme.of(context).colorScheme.error,
-                    ),
-                  );
-                }
-              },
+              onAcceptWithDetails: (details) => _onParentDrop(details.data, parent),
               builder: (context, candidateData, rejectedData) {
                 return Container(
                   decoration: BoxDecoration(
@@ -564,71 +328,29 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                           ).colorScheme.primaryContainer.withValues(alpha: 0.1)
                         : null,
                   ),
-                  child:
-                      tasks.isEmpty &&
-                          !(widget.showAddTask &&
-                              widget.addTaskColumnIndex == columnIndex)
-                      ? ZeroState(
-                          parentTitle: parent?.title,
-                          onAddTask: () => widget.onAddTask(
-                            parent?.id.toString(),
-                            parent?.title,
-                            columnIndex: columnIndex,
-                          ),
-                          isDesktop: true,
-                        )
-                      : ListView.builder(
-                          itemCount:
-                              tasks.length +
-                              (widget.showAddTask &&
-                                      widget.addTaskColumnIndex == columnIndex
-                                  ? 1
-                                  : 0),
-                          itemBuilder: (context, index) {
-                            if (widget.showAddTask &&
-                                widget.addTaskColumnIndex == columnIndex &&
-                                index == tasks.length) {
-                              return AddTaskTile(
-                                parentId: parent?.id.toString(),
-                                parentTitle: parent?.title,
-                                onAddTask: widget.onCreateTask,
-                                onAddMultipleTasks: widget.onAddMultipleTasks,
-                                onCancel: widget.onHideAddTask,
-                              );
-                            }
-
-                            final task = tasks[index];
-                            final isSelected = _columnHierarchy.contains(task);
-                            return DragTarget<Task>(
-                              onWillAcceptWithDetails: (details) =>
-                                  details.data.id != task.id,
-                              onAcceptWithDetails: (details) =>
-                                  _onTaskDrop(details.data, task),
-                              builder: (context, candidateData, rejectedData) {
-                                return TaskTile(
-                                  key: ValueKey(task.id),
-                                  task: task,
-                                  isEditing: widget.editingTaskId == task.id,
-                                  isSelected: isSelected,
-                                  editController: widget.editController,
-                                  onTap: () async =>
-                                      await _navigateToSubtasks(task),
-                                  onEdit: () => widget.onStartEditing(task),
-                                  onDelete: () => widget.onDeleteTask(task.id),
-                                  onCheckboxChanged: (_) => widget.onUpdateTask(
-                                    task.id,
-                                    isCompleted: !task.isCompleted,
-                                  ),
-                                  onEditComplete: widget.onFinishEditing,
-                                  onEditCancel: widget.onEditCancel,
-                                  isDragTarget: candidateData.isNotEmpty,
-                                  onDragAccept: (draggedTask) =>
-                                      _onTaskDrop(draggedTask, task),
-                                );
-                              },
-                            );
-                          },
-                        ),
+                  child: SharedTaskList(
+                    tasks: tasks,
+                    parent: parent,
+                    editingTaskId: widget.editingTaskId,
+                    editController: widget.editController,
+                    showAddTask: widget.showAddTask,
+                    addTaskParentId: widget.addTaskColumnIndex == columnIndex 
+                        ? parent?.id.toString() 
+                        : null,
+                    onTaskTap: _navigateToSubtasks,
+                    onStartEditing: widget.onStartEditing,
+                    onDeleteTask: widget.onDeleteTask,
+                    onUpdateTask: widget.onUpdateTask,
+                    onFinishEditing: widget.onFinishEditing,
+                    onEditCancel: widget.onEditCancel,
+                    onTaskDrop: _onTaskDrop,
+                    onCreateTask: widget.onCreateTask,
+                    onAddMultipleTasks: widget.onAddMultipleTasks,
+                    onHideAddTask: widget.onHideAddTask,
+                    onAddTask: widget.onAddTask,
+                    isDesktop: true,
+                    isSelected: (task) => _columnHierarchy.contains(task),
+                  ),
                 );
               },
             ),
