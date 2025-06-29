@@ -6,6 +6,7 @@ import 'task_tile.dart';
 import 'breadcrumb_navigation.dart';
 import 'print_menu.dart';
 import 'zero_state.dart';
+import '../services/logging_service.dart';
 
 class MobileDrillDownView extends StatefulWidget {
   final TaskManager taskManager;
@@ -27,6 +28,7 @@ class MobileDrillDownView extends StatefulWidget {
   final VoidCallback? onRefresh;
   final int? refreshKey;
   final Function(Task?, int)? onParentChange;
+  final VoidCallback? onReorder;
 
   const MobileDrillDownView({
     super.key,
@@ -49,6 +51,7 @@ class MobileDrillDownView extends StatefulWidget {
     this.onRefresh,
     this.refreshKey,
     this.onParentChange,
+    this.onReorder,
   });
 
   @override
@@ -59,14 +62,51 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
   Task? _currentParent;
   List<Task?> _breadcrumbs = [null];
   bool _isDragging = false;
-  Future<List<Task>>? _currentTasksFuture;
+  List<Task>? _tasks;
+  bool _isLoading = false;
 
-  Future<List<Task>> _getCurrentTasks() {
-    return widget.taskManager.getTasksAtLevel(_currentParent?.id.toString());
+  @override
+  void initState() {
+    super.initState();
+    _fetchTasks();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      widget.onParentChange?.call(_currentParent, 0);
+    });
   }
 
-  void _refreshTasks() {
-    _currentTasksFuture = _getCurrentTasks();
+  @override
+  void didUpdateWidget(covariant MobileDrillDownView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.refreshKey != oldWidget.refreshKey && !_isLoading) {
+      _fetchTasks();
+    }
+  }
+
+  Future<void> _fetchTasks() async {
+    if (_isLoading) return;
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final tasks =
+          await widget.taskManager.getTasksAtLevel(_currentParent?.id.toString());
+      if (mounted) {
+        setState(() {
+          _tasks = tasks;
+          _isLoading = false;
+        });
+      }
+    } catch (e, s) {
+      LoggingService.error('Error fetching mobile tasks: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   Future<void> _printCurrentLevel() async {
@@ -294,47 +334,24 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
     return pathParts.join(' > ');
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _refreshTasks();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      widget.onParentChange?.call(null, 0);
-    });
-  }
-
-  @override
-  void didUpdateWidget(MobileDrillDownView oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.taskManager != oldWidget.taskManager ||
-        widget.editingTaskId != oldWidget.editingTaskId ||
-        widget.refreshKey != oldWidget.refreshKey) {
-      setState(() {
-        _refreshTasks();
-      });
-    }
-  }
-
   void _navigateToSubtasks(Task parentTask) {
     setState(() {
+      if (!_breadcrumbs.contains(parentTask)) {
+        _breadcrumbs.add(parentTask);
+      }
       _currentParent = parentTask;
-      _breadcrumbs.add(parentTask);
-      _refreshTasks();
+      _fetchTasks();
+      widget.onParentChange?.call(_currentParent, _breadcrumbs.length - 1);
     });
-    widget.onParentChange?.call(parentTask, _breadcrumbs.length - 1);
   }
 
-  void _navigateUp(Task? targetParent) {
+  void _navigateUp(int index) {
     setState(() {
-      _currentParent = targetParent;
-
-      final targetIndex = _breadcrumbs.indexOf(targetParent);
-      if (targetIndex != -1) {
-        _breadcrumbs = _breadcrumbs.sublist(0, targetIndex + 1);
-      }
-      _refreshTasks();
+      _breadcrumbs = _breadcrumbs.sublist(0, index + 1);
+      _currentParent = _breadcrumbs[index];
+      _fetchTasks();
+      widget.onParentChange?.call(_currentParent, index);
     });
-    widget.onParentChange?.call(targetParent, targetParent != null ? _breadcrumbs.indexOf(targetParent) : 0);
   }
 
   void _onTaskDrop(Task draggedTask, Task targetTask) async {
@@ -345,7 +362,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
 
       if (mounted) {
         setState(() {
-          _refreshTasks();
+          _fetchTasks();
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -371,7 +388,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
     }
   }
 
-  void _onBreadcrumbDrop(Task draggedTask, Task? targetParent) async {
+  Future<void> _onBreadcrumbDrop(Task draggedTask, Task? targetParent) async {
     try {
       await widget.taskManager.moveTaskToParent(
         draggedTask.id,
@@ -380,7 +397,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
 
       if (mounted) {
         setState(() {
-          _refreshTasks();
+          _fetchTasks();
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -431,7 +448,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
             children: [
               BreadcrumbNavigation(
                 breadcrumbs: _breadcrumbs,
-                onNavigate: _navigateUp,
+                onNavigate: (task) => _navigateUp(_breadcrumbs.indexOf(task)),
                 onTaskDrop: _onBreadcrumbDrop,
                 isDragging: _isDragging,
               ),
@@ -469,72 +486,147 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
                       context,
                     ).colorScheme.primaryContainer.withValues(alpha: 0.1),
                   ),
-                  child: FutureBuilder<List<Task>>(
-                    future: _currentTasksFuture,
-                    builder: (context, snapshot) {
-                      if (snapshot.hasError) {
-                        return Center(child: Text('Error: ${snapshot.error}'));
-                      }
-                      if (!snapshot.hasData) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                      final tasks = snapshot.data!;
-                      return tasks.isEmpty && !(widget.showAddTask && widget.addTaskParentId == _currentParent?.id.toString())
-                          ? ZeroState(
-                              parentTitle: _currentParent?.title,
-                              onAddTask: () => widget.onAddTask(
-                                _currentParent?.id.toString(),
-                                _currentParent?.title,
-                                columnIndex: null,
-                              ),
-                              isDesktop: false,
-                            )
-                          : ListView.builder(
-                              itemCount: tasks.length + (widget.showAddTask && widget.addTaskParentId == _currentParent?.id.toString() ? 1 : 0),
-                              itemBuilder: (context, index) {
-                                if (widget.showAddTask && widget.addTaskParentId == _currentParent?.id.toString() && index == tasks.length) {
-                                  return AddTaskTile(
-                                    parentId: _currentParent?.id.toString(),
-                                    parentTitle: _currentParent?.title,
-                                    onAddTask: widget.onCreateTask,
-                                    onAddMultipleTasks: widget.onAddMultipleTasks,
-                                    onCancel: widget.onHideAddTask,
-                                  );
-                                }
-                                
-                                final task = tasks[index];
-                                return DragTarget<Task>(
-                                  onWillAcceptWithDetails: (details) =>
-                                      details.data.id != task.id,
-                                  onAcceptWithDetails: (details) =>
-                                      _onTaskDrop(details.data, task),
-                                  builder: (context, candidateData, rejectedData) {
-                                    return TaskTile(
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _tasks == null
+                          ? Center(child: Text('Error loading tasks.'))
+                          : _tasks!.isEmpty &&
+                                  !(widget.showAddTask &&
+                                      widget.addTaskParentId ==
+                                          _currentParent?.id.toString())
+                              ? ZeroState(
+                                  parentTitle: _currentParent?.title,
+                                  onAddTask: () => widget.onAddTask(
+                                    _currentParent?.id.toString(),
+                                    _currentParent?.title,
+                                    columnIndex: null,
+                                  ),
+                                  isDesktop: false,
+                                )
+                              : ReorderableListView.builder(
+                                  key: ValueKey('reorderable_list_mobile_${_currentParent?.id ?? 'root'}'),
+                                  itemCount: _tasks!.length +
+                                      (widget.showAddTask &&
+                                              widget.addTaskParentId ==
+                                                  _currentParent?.id.toString()
+                                          ? 1
+                                          : 0),
+                                  itemBuilder: (context, index) {
+                                    if (widget.showAddTask &&
+                                        widget.addTaskParentId ==
+                                            _currentParent?.id.toString() &&
+                                        index == _tasks!.length) {
+                                      return AddTaskTile(
+                                        key: const ValueKey(
+                                            'add_task_tile_mobile'),
+                                        parentId: _currentParent?.id.toString(),
+                                        parentTitle: _currentParent?.title,
+                                        onAddTask: widget.onCreateTask,
+                                        onAddMultipleTasks:
+                                            widget.onAddMultipleTasks,
+                                        onCancel: widget.onHideAddTask,
+                                      );
+                                    }
+
+                                    final task = _tasks![index];
+                                    return DragTarget<Task>(
                                       key: ValueKey(task.id),
-                                      task: task,
-                                      isEditing: widget.editingTaskId == task.id,
-                                      editController: widget.editController,
-                                      onTap: () => _navigateToSubtasks(task),
-                                      onEdit: () => widget.onStartEditing(task),
-                                      onDelete: () => widget.onDeleteTask(task.id),
-                                      onCheckboxChanged: (_) => widget.onUpdateTask(
-                                        task.id,
-                                        isCompleted: !task.isCompleted,
-                                      ),
-                                      onEditComplete: widget.onFinishEditing,
-                                      onEditCancel: widget.onEditCancel,
-                                      isDragTarget: candidateData.isNotEmpty,
-                                      onDragAccept: (draggedTask) =>
-                                          _onTaskDrop(draggedTask, task),
+                                      onWillAcceptWithDetails: (details) =>
+                                          details.data.id != task.id,
+                                      onAcceptWithDetails: (details) =>
+                                          _onTaskDrop(details.data, task),
+                                      builder: (context, candidateData,
+                                          rejectedData) {
+                                        return TaskTile(
+                                          task: task,
+                                          isEditing:
+                                              widget.editingTaskId == task.id,
+                                          editController:
+                                              widget.editController,
+                                          onTap: () =>
+                                              _navigateToSubtasks(task),
+                                          onEdit: () =>
+                                              widget.onStartEditing(task),
+                                          onDelete: () =>
+                                              widget.onDeleteTask(task.id),
+                                          onCheckboxChanged: (_) =>
+                                              widget.onUpdateTask(
+                                            task.id,
+                                            isCompleted: !task.isCompleted,
+                                          ),
+                                          onEditComplete:
+                                              widget.onFinishEditing,
+                                          onEditCancel: widget.onEditCancel,
+                                          isDragTarget:
+                                              candidateData.isNotEmpty,
+                                          onDragAccept: (draggedTask) =>
+                                              _onTaskDrop(draggedTask, task),
+                                          isReorderable: true,
+                                          reorderableListViewIndex: index,
+                                        );
+                                      },
                                     );
                                   },
-                                );
-                              },
-                            );
-                    },
+                                  buildDefaultDragHandles: false,
+                                  onReorder:
+                                      (int oldIndex, int newIndex) {
+                                    final tasks = _tasks!;
+                                    final hasAddTaskTile = widget.showAddTask &&
+                                        widget.addTaskParentId ==
+                                            _currentParent?.id.toString();
+                                    final numActualTasks = tasks.length;
+
+                                    if (oldIndex >= numActualTasks) return;
+
+                                    if (hasAddTaskTile &&
+                                        newIndex > numActualTasks) {
+                                      newIndex = numActualTasks;
+                                    }
+
+                                    if (newIndex > oldIndex) {
+                                      newIndex -= 1;
+                                    }
+
+                                    if (newIndex >= numActualTasks) {
+                                      newIndex = numActualTasks - 1;
+                                    }
+                                    if (newIndex < 0) newIndex = 0;
+
+                                    final taskToMove = tasks[oldIndex];
+
+                                    setState(() {
+                                      final newTaskList = List<Task>.from(tasks);
+                                      newTaskList.removeAt(oldIndex);
+                                      newTaskList.insert(newIndex, taskToMove);
+                                      _tasks = newTaskList;
+                                    });
+
+                                    widget.taskManager
+                                        .reorderTaskInList(
+                                      _currentParent?.id,
+                                      taskToMove.id,
+                                      oldIndex,
+                                      newIndex,
+                                    )
+                                        .then((_) {
+                                      widget.onReorder?.call();
+                                    }).catchError((e, s) {
+                                      LoggingService.error(
+                                          'Failed to reorder task: $e');
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(SnackBar(
+                                          content: const Text(
+                                              'Error updating order'),
+                                          backgroundColor: Colors.red,
+                                        ));
+                                        _fetchTasks();
+                                      }
+                                    });
+                                  },
+                                ),
                   ),
                 ),
-              ),
             ],
           ),
         );

@@ -66,10 +66,10 @@ class TaskManager {
   }
 
   Future<void> reorderTaskInList(
-    int? parentId, // Changed to int? to align with domain model
-    int taskId,    // ID of the task being moved
-    int oldIndex,  // Original index in the list (0-based)
-    int newIndex,  // New index in the list (0-based)
+    int? parentId,
+    int taskId,
+    int oldIndex,
+    int newIndex,
   ) async {
     // Fetch the current list of tasks for the given parent, already sorted by order
     final tasks = await (parentId == null
@@ -77,30 +77,34 @@ class TaskManager {
         : _repo.getSubtasks(parentId));
 
     if (oldIndex < 0 || oldIndex >= tasks.length || newIndex < 0 || newIndex >= tasks.length) {
-      // Index out of bounds, though newIndex can be tasks.length for moving to the end.
-      // For simplicity, we'll assume newIndex is also within current bounds for now.
-      // A more robust check might be needed if newIndex can be tasks.length.
       print("ReorderTaskInList: Invalid indices old: $oldIndex, new: $newIndex, length: ${tasks.length}");
       return;
     }
 
-    // Find the task being moved. The list is 0-indexed, matching oldIndex.
-    final taskToMove = tasks.removeAt(oldIndex);
+    // Find the task being moved
+    final taskToMove = tasks[oldIndex];
+    if (taskToMove.id != taskId) {
+      print("ReorderTaskInList: Task ID mismatch. Expected: $taskId, Found: ${taskToMove.id}");
+      return;
+    }
 
-    // Insert it at the new position.
+    // Remove the task from its current position
+    tasks.removeAt(oldIndex);
+
+    // Insert it at the new position
     tasks.insert(newIndex, taskToMove);
 
-    // Update the 'order' property for all tasks in this list.
-    // The 'order' should now reflect their new position in the 'tasks' list.
-    // We can use 1-based ordering for the database, or 0-based if preferred.
-    // Let's use 1-based to match the repository's createTask logic.
-    final List<domain.Task> updatedTasks = [];
+    // Update the order values for all tasks in the list
+    final updatedTasks = <domain.Task>[];
     for (int i = 0; i < tasks.length; i++) {
-      if (tasks[i].order != (i + 1)) {
-        updatedTasks.add(tasks[i].copyWith(order: i + 1));
+      final task = tasks[i];
+      final newOrder = i + 1; // Use 1-based ordering
+      if (task.order != newOrder) {
+        updatedTasks.add(task.copyWith(order: newOrder));
       }
     }
 
+    // Update all tasks in the database
     if (updatedTasks.isNotEmpty) {
       await _repo.updateTaskOrderInBatch(updatedTasks);
     }

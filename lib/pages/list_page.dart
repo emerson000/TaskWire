@@ -192,6 +192,12 @@ class _ListPageState extends State<ListPage> {
     });
   }
 
+  void _onReorder() {
+    setState(() {
+      _refreshCounter++;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDesktop = _isDesktop(context);
@@ -229,6 +235,7 @@ class _ListPageState extends State<ListPage> {
       onHideAddTask: _hideAddTaskInline,
       onColumnChange: _updateCurrentColumn,
       refreshKey: _refreshCounter,
+      onReorder: _onReorder,
     );
   }
 
@@ -252,6 +259,7 @@ class _ListPageState extends State<ListPage> {
       addTaskParentTitle: _addTaskParentTitle,
       refreshKey: _refreshCounter,
       onParentChange: _updateCurrentColumn,
+      onReorder: _onReorder,
     );
   }
 }

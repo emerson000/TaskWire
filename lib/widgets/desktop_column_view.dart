@@ -28,6 +28,7 @@ class DesktopColumnView extends StatefulWidget {
   final VoidCallback onHideAddTask;
   final Function(Task?, int)? onColumnChange;
   final int? refreshKey;
+  final VoidCallback? onReorder;
 
   const DesktopColumnView({
     super.key,
@@ -50,6 +51,7 @@ class DesktopColumnView extends StatefulWidget {
     required this.onHideAddTask,
     this.onColumnChange,
     this.refreshKey,
+    this.onReorder,
   });
 
   @override
@@ -66,10 +68,15 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
   final Map<int, bool> _resizeHandleHovered = <int, bool>{};
   final Map<int, bool> _resizeHandleDragging = <int, bool>{};
 
+  final Map<int?, List<Task>> _tasksCache = {};
+  final Map<int?, bool> _isTasksLoading = {};
+
   @override
   void didUpdateWidget(covariant DesktopColumnView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.refreshKey != oldWidget.refreshKey) {
+      _tasksCache.clear();
+      _isTasksLoading.clear();
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         await _validateAndCleanupHierarchy();
         if (mounted) {
@@ -102,6 +109,33 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
       });
     } catch (e) {
       LoggingService.error('Error loading column widths: $e');
+    }
+  }
+
+  Future<void> _fetchTasksForColumn(int? parentId) async {
+    if (_isTasksLoading[parentId] == true || !mounted) return;
+
+    setState(() {
+      _isTasksLoading[parentId] = true;
+    });
+
+    try {
+      final tasks = await widget.taskManager.getTasksAtLevel(parentId?.toString());
+      if (mounted) {
+        setState(() {
+          _tasksCache[parentId] = tasks;
+          _isTasksLoading[parentId] = false;
+        });
+      }
+    } catch (e, s) {
+      LoggingService.error(
+        'Error fetching tasks for column $parentId: $e',
+      );
+      if (mounted) {
+        setState(() {
+          _isTasksLoading[parentId] = false;
+        });
+      }
     }
   }
 
@@ -578,6 +612,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                           isDesktop: true,
                         )
                       : ReorderableListView.builder(
+                          key: ValueKey('reorderable_list_${parent?.id ?? 'root'}'),
                           itemCount: tasks.length +
                               (widget.showAddTask &&
                                       widget.addTaskColumnIndex == columnIndex
@@ -636,43 +671,60 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                             );
                           },
                           buildDefaultDragHandles: false, // Disable default handles
-                          onReorder: (int oldIndex, int newIndex) async {
-                            // Adjust newIndex if dragging an item downwards past the AddTaskTile
-                            // This check is important because AddTaskTile is not a "real" task for reordering.
-                            final hasAddTaskTile = widget.showAddTask && widget.addTaskColumnIndex == columnIndex;
-                            final numActualTasks = tasks.length;
+                          onReorder: (int oldIndex, int newIndex) {
+                            final hasAddTaskTile = widget.showAddTask &&
+                                widget.addTaskColumnIndex ==
+                                    columnIndex;
+                            final taskList = _tasksCache[parent?.id];
+                            if (taskList == null) return;
+                            final numActualTasks = taskList.length;
 
-                            if (oldIndex >= numActualTasks) return; // Dragged AddTaskTile, should not happen with buildDefaultDragHandles=false
+                            if (oldIndex >= numActualTasks) return;
 
-                            if (hasAddTaskTile && newIndex > numActualTasks) {
+                            if (hasAddTaskTile &&
+                                newIndex > numActualTasks) {
                               newIndex = numActualTasks;
                             }
 
-                            // If newIndex is greater than oldIndex, it means the item is moved down.
-                            // The ReorderableListView's newIndex is based on the visual list.
-                            // If an item is dragged downwards past other items, newIndex will be one greater
-                            // than its final list position because the item itself is removed before being reinserted.
                             if (newIndex > oldIndex) {
-                                newIndex -= 1;
+                              newIndex -= 1;
                             }
 
-                            // Ensure newIndex is within the bounds of actual tasks
                             if (newIndex >= numActualTasks) {
-                                newIndex = numActualTasks -1;
+                              newIndex = numActualTasks - 1;
                             }
                             if (newIndex < 0) newIndex = 0;
 
-                            final taskToMove = tasks[oldIndex];
-                            await widget.taskManager.reorderTaskInList(
+                            final taskToMove = taskList[oldIndex];
+
+                            setState(() {
+                              final newTaskList = List<Task>.from(taskList);
+                              newTaskList.removeAt(oldIndex);
+                              newTaskList.insert(newIndex, taskToMove);
+                              _tasksCache[parent?.id] = newTaskList;
+                            });
+
+                            widget.taskManager
+                                .reorderTaskInList(
                               parent?.id,
                               taskToMove.id,
                               oldIndex,
                               newIndex,
-                            );
-                            setState(() {
-                              // The FutureBuilder will refetch and rebuild,
-                              // or we can manually update the local 'tasks' list for immediate feedback
-                              // For simplicity, relying on FutureBuilder refresh triggered by setState.
+                            )
+                                .then((_) {
+                              widget.onReorder?.call();
+                            }).catchError((e, s) {
+                              LoggingService.error(
+                                  'Failed to reorder task: $e');
+                              if (mounted) {
+                                ScaffoldMessenger.of(context)
+                                    .showSnackBar(SnackBar(
+                                  content: const Text(
+                                      'Error updating order'),
+                                  backgroundColor: Colors.red,
+                                ));
+                                _fetchTasksForColumn(parent?.id);
+                              }
                             });
                           },
                           // Optional: Add a proxy decorator for custom drag feedback if needed

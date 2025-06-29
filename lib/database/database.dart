@@ -126,27 +126,8 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<bool> updateTask(TasksCompanion task) async {
-    final existing = await getTaskById(task.id.value);
-    if (existing == null) return false;
-
-    final updatedTask = TasksCompanion(
-      id: task.id,
-      title: task.title.present ? task.title : Value(existing.title),
-      isCompleted: task.isCompleted.present
-          ? task.isCompleted
-          : Value(existing.isCompleted),
-      parentId: task.parentId.present
-          ? task.parentId
-          : Value(existing.parentId),
-      createdAt: task.createdAt.present
-          ? task.createdAt
-          : Value(existing.createdAt),
-      updatedAt: task.updatedAt.present
-          ? task.updatedAt
-          : Value(existing.updatedAt),
-    );
-
-    return update(tasks).replace(updatedTask);
+    final updatedRows = await (update(tasks)..where((t) => t.id.equals(task.id.value))).write(task);
+    return updatedRows > 0;
   }
 
   Future<int> deleteTask(int taskId) {

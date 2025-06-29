@@ -148,7 +148,7 @@ class TaskTile extends StatelessWidget {
           if (isReorderable && reorderableListViewIndex != null)
             ReorderableDragStartListener(
               index: reorderableListViewIndex!,
-              child: const Icon(Icons.drag_handle),
+              child: _buildDragHandle(context),
             ),
           if (isReorderable && reorderableListViewIndex != null)
             const SizedBox(width: 8), // Spacing between handle and checkbox
@@ -333,6 +333,21 @@ class TaskTile extends StatelessWidget {
           fontWeight: FontWeight.bold,
           color: Theme.of(context).colorScheme.onPrimaryContainer,
         ),
+      ),
+    );
+  }
+
+  Widget _buildDragHandle(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4.0),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceVariant.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(4.0),
+      ),
+      child: Icon(
+        Icons.drag_handle,
+        size: 16,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
       ),
     );
   }
