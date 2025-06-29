@@ -662,51 +662,6 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                             }
                             if (newIndex < 0) newIndex = 0;
 
-
-                            // Prevent reordering the AddTaskTile itself if it's somehow part of this.
-                            // This check should ideally ensure 'oldIndex' is not for AddTaskTile.
-                            // Already handled by oldIndex >= numActualTasks check.
-
-                            final taskToMove = tasks[oldIndex];
-                            await widget.taskManager.reorderTaskInList(
-                              parent?.id,
-                              taskToMove.id,
-                              oldIndex,
-                              newIndex,
-                            );
-                            setState(() {
-                              // The FutureBuilder will refetch and rebuild,
-                              // or we can manually update the local 'tasks' list for immediate feedback
-                              // For simplicity, relying on FutureBuilder refresh triggered by setState.
-                            });
-                          },
-                          // Optional: Add a proxy decorator for custom drag feedback if needed
-                          // proxyDecorator: (Widget child, int index, Animation<double> animation) { ... }
-                        ),
-                );
-              },
-                                if (newIndex > tasks.length) {
-                                  newIndex = tasks.length;
-                                }
-                            }
-
-                            // If newIndex is greater than oldIndex, it means the item is moved down.
-                            // If newIndex is now pointing at where the AddTaskTile was (if it exists and was after the dragged item),
-                            // or if it's moved to the very end of the list of actual tasks.
-                            // The ReorderableListView's newIndex is based on the visual list.
-                            // If an item is dragged downwards, newIndex will be one greater than its final list position
-                            // because the item itself is removed before being reinserted.
-                            // So, if newIndex > oldIndex, we might need to decrement newIndex.
-                            if (newIndex > oldIndex) {
-                                newIndex -= 1;
-                            }
-
-                            // Prevent reordering the AddTaskTile itself if it's somehow part of this.
-                            // This check should ideally ensure 'oldIndex' is not for AddTaskTile.
-                            if (widget.showAddTask && widget.addTaskColumnIndex == columnIndex && oldIndex == tasks.length) {
-                                return; // Cannot reorder the AddTaskTile
-                            }
-
                             final taskToMove = tasks[oldIndex];
                             await widget.taskManager.reorderTaskInList(
                               parent?.id,

@@ -71,7 +71,7 @@ class AppDatabase extends _$AppDatabase {
         // Initialize order for existing tasks.
         // A simple way is to use their ID, or createdAt time if available and reliable.
         // Using ID is simpler and guarantees uniqueness for existing items.
-        await m.customStatement('UPDATE tasks SET "order" = id WHERE "order" = 0;');
+        await customStatement('UPDATE tasks SET "order" = id WHERE "order" = 0;');
       }
     },
     beforeOpen: (details) async {
