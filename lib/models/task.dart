@@ -6,6 +6,7 @@ class Task {
   List<Task> subtasks;
   DateTime createdAt;
   DateTime updatedAt;
+  int order; // New field for task order
 
   Task({
     required this.id,
@@ -15,6 +16,7 @@ class Task {
     List<Task>? subtasks,
     DateTime? createdAt,
     DateTime? updatedAt,
+    this.order = 0, // Default order
   }) : subtasks = subtasks ?? [],
        createdAt = createdAt ?? DateTime.now(),
        updatedAt = updatedAt ?? DateTime.now();
@@ -63,6 +65,7 @@ class Task {
     List<Task>? subtasks,
     DateTime? createdAt,
     DateTime? updatedAt,
+    int? order,
   }) {
     return Task(
       id: id ?? this.id,
@@ -72,6 +75,7 @@ class Task {
       subtasks: subtasks ?? List.from(this.subtasks),
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      order: order ?? this.order,
     );
   }
 
@@ -86,6 +90,6 @@ class Task {
 
   @override
   String toString() {
-    return 'Task(id: $id, title: $title, isCompleted: $isCompleted, parentId: $parentId, subtasks: ${subtasks.length})';
+    return 'Task(id: $id, title: $title, isCompleted: $isCompleted, parentId: $parentId, order: $order, subtasks: ${subtasks.length})';
   }
 }

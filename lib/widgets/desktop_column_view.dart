@@ -577,18 +577,19 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                           ),
                           isDesktop: true,
                         )
-                      : ListView.builder(
-                          itemCount:
-                              tasks.length +
+                      : ReorderableListView.builder(
+                          itemCount: tasks.length +
                               (widget.showAddTask &&
                                       widget.addTaskColumnIndex == columnIndex
                                   ? 1
                                   : 0),
                           itemBuilder: (context, index) {
+                            // Key is crucial for ReorderableListView
                             if (widget.showAddTask &&
                                 widget.addTaskColumnIndex == columnIndex &&
                                 index == tasks.length) {
                               return AddTaskTile(
+                                key: const ValueKey('add_task_tile_in_column'), // Unique key
                                 parentId: parent?.id.toString(),
                                 parentTitle: parent?.title,
                                 onAddTask: widget.onCreateTask,
@@ -599,14 +600,18 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
 
                             final task = tasks[index];
                             final isSelected = _columnHierarchy.contains(task);
+                            // Each item in ReorderableListView must have a unique Key.
+                            // TaskTile itself is draggable for reparenting.
+                            // The ReorderableListView handles the reorder drag.
                             return DragTarget<Task>(
+                              key: ValueKey(task.id), // Ensure key is here for ReorderableListView
                               onWillAcceptWithDetails: (details) =>
-                                  details.data.id != task.id,
+                                  details.data.id != task.id && details.data.parentId != task.id, // Prevent dropping on self or direct parent
                               onAcceptWithDetails: (details) =>
-                                  _onTaskDrop(details.data, task),
+                                  _onTaskDrop(details.data, task), // This is for reparenting
                               builder: (context, candidateData, rejectedData) {
                                 return TaskTile(
-                                  key: ValueKey(task.id),
+                                  // Do not pass ValueKey(task.id) here if already on DragTarget parent
                                   task: task,
                                   isEditing: widget.editingTaskId == task.id,
                                   isSelected: isSelected,
@@ -623,11 +628,100 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                                   onEditCancel: widget.onEditCancel,
                                   isDragTarget: candidateData.isNotEmpty,
                                   onDragAccept: (draggedTask) =>
-                                      _onTaskDrop(draggedTask, task),
+                                      _onTaskDrop(draggedTask, task), // For reparenting
+                                  isReorderable: true, // Enable reorder handle
+                                  reorderableListViewIndex: index, // Pass index
                                 );
                               },
                             );
                           },
+                          buildDefaultDragHandles: false, // Disable default handles
+                          onReorder: (int oldIndex, int newIndex) async {
+                            // Adjust newIndex if dragging an item downwards past the AddTaskTile
+                            // This check is important because AddTaskTile is not a "real" task for reordering.
+                            final hasAddTaskTile = widget.showAddTask && widget.addTaskColumnIndex == columnIndex;
+                            final numActualTasks = tasks.length;
+
+                            if (oldIndex >= numActualTasks) return; // Dragged AddTaskTile, should not happen with buildDefaultDragHandles=false
+
+                            if (hasAddTaskTile && newIndex > numActualTasks) {
+                              newIndex = numActualTasks;
+                            }
+
+                            // If newIndex is greater than oldIndex, it means the item is moved down.
+                            // The ReorderableListView's newIndex is based on the visual list.
+                            // If an item is dragged downwards past other items, newIndex will be one greater
+                            // than its final list position because the item itself is removed before being reinserted.
+                            if (newIndex > oldIndex) {
+                                newIndex -= 1;
+                            }
+
+                            // Ensure newIndex is within the bounds of actual tasks
+                            if (newIndex >= numActualTasks) {
+                                newIndex = numActualTasks -1;
+                            }
+                            if (newIndex < 0) newIndex = 0;
+
+
+                            // Prevent reordering the AddTaskTile itself if it's somehow part of this.
+                            // This check should ideally ensure 'oldIndex' is not for AddTaskTile.
+                            // Already handled by oldIndex >= numActualTasks check.
+
+                            final taskToMove = tasks[oldIndex];
+                            await widget.taskManager.reorderTaskInList(
+                              parent?.id,
+                              taskToMove.id,
+                              oldIndex,
+                              newIndex,
+                            );
+                            setState(() {
+                              // The FutureBuilder will refetch and rebuild,
+                              // or we can manually update the local 'tasks' list for immediate feedback
+                              // For simplicity, relying on FutureBuilder refresh triggered by setState.
+                            });
+                          },
+                          // Optional: Add a proxy decorator for custom drag feedback if needed
+                          // proxyDecorator: (Widget child, int index, Animation<double> animation) { ... }
+                        ),
+                );
+              },
+                                if (newIndex > tasks.length) {
+                                  newIndex = tasks.length;
+                                }
+                            }
+
+                            // If newIndex is greater than oldIndex, it means the item is moved down.
+                            // If newIndex is now pointing at where the AddTaskTile was (if it exists and was after the dragged item),
+                            // or if it's moved to the very end of the list of actual tasks.
+                            // The ReorderableListView's newIndex is based on the visual list.
+                            // If an item is dragged downwards, newIndex will be one greater than its final list position
+                            // because the item itself is removed before being reinserted.
+                            // So, if newIndex > oldIndex, we might need to decrement newIndex.
+                            if (newIndex > oldIndex) {
+                                newIndex -= 1;
+                            }
+
+                            // Prevent reordering the AddTaskTile itself if it's somehow part of this.
+                            // This check should ideally ensure 'oldIndex' is not for AddTaskTile.
+                            if (widget.showAddTask && widget.addTaskColumnIndex == columnIndex && oldIndex == tasks.length) {
+                                return; // Cannot reorder the AddTaskTile
+                            }
+
+                            final taskToMove = tasks[oldIndex];
+                            await widget.taskManager.reorderTaskInList(
+                              parent?.id,
+                              taskToMove.id,
+                              oldIndex,
+                              newIndex,
+                            );
+                            setState(() {
+                              // The FutureBuilder will refetch and rebuild,
+                              // or we can manually update the local 'tasks' list for immediate feedback
+                              // For simplicity, relying on FutureBuilder refresh triggered by setState.
+                            });
+                          },
+                          // Optional: Add a proxy decorator for custom drag feedback if needed
+                          // proxyDecorator: (Widget child, int index, Animation<double> animation) { ... }
                         ),
                 );
               },

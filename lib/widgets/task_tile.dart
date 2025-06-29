@@ -16,6 +16,8 @@ class TaskTile extends StatelessWidget {
   final VoidCallback? onEditCancel;
   final bool isDragTarget;
   final Function(Task)? onDragAccept;
+  final int? reorderableListViewIndex; // Index for ReorderableDragStartListener
+  final bool isReorderable; // To control visibility of drag handle
 
   const TaskTile({
     super.key,
@@ -31,6 +33,8 @@ class TaskTile extends StatelessWidget {
     this.onEditCancel,
     this.isDragTarget = false,
     this.onDragAccept,
+    this.reorderableListViewIndex,
+    this.isReorderable = false,
   });
 
   @override
@@ -138,9 +142,21 @@ class TaskTile extends StatelessWidget {
     
     Widget tileContent = ListTile(
       tileColor: isSelected ? Theme.of(context).colorScheme.surfaceContainer : null,
-      leading: Checkbox(
-        value: task.isCompleted,
-        onChanged: onCheckboxChanged,
+      leading: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (isReorderable && reorderableListViewIndex != null)
+            ReorderableDragStartListener(
+              index: reorderableListViewIndex!,
+              child: const Icon(Icons.drag_handle),
+            ),
+          if (isReorderable && reorderableListViewIndex != null)
+            const SizedBox(width: 8), // Spacing between handle and checkbox
+          Checkbox(
+            value: task.isCompleted,
+            onChanged: onCheckboxChanged,
+          ),
+        ],
       ),
       title: Text(
         task.title,

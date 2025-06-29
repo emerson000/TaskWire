@@ -83,6 +83,16 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
     requiredDuringInsert: false,
     defaultValue: currentDateAndTime,
   );
+  static const VerificationMeta _orderMeta = const VerificationMeta('order');
+  @override
+  late final GeneratedColumn<int> order = GeneratedColumn<int>(
+    'order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -91,6 +101,7 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
     parentId,
     createdAt,
     updatedAt,
+    order,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -142,6 +153,12 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
         updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
       );
     }
+    if (data.containsKey('order')) {
+      context.handle(
+        _orderMeta,
+        order.isAcceptableOrUnknown(data['order']!, _orderMeta),
+      );
+    }
     return context;
   }
 
@@ -175,6 +192,10 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
       )!,
+      order: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}order'],
+      )!,
     );
   }
 
@@ -191,6 +212,7 @@ class Task extends DataClass implements Insertable<Task> {
   final int? parentId;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final int order;
   const Task({
     required this.id,
     required this.title,
@@ -198,6 +220,7 @@ class Task extends DataClass implements Insertable<Task> {
     this.parentId,
     required this.createdAt,
     required this.updatedAt,
+    required this.order,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -210,6 +233,7 @@ class Task extends DataClass implements Insertable<Task> {
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['order'] = Variable<int>(order);
     return map;
   }
 
@@ -223,6 +247,7 @@ class Task extends DataClass implements Insertable<Task> {
           : Value(parentId),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
+      order: Value(order),
     );
   }
 
@@ -238,6 +263,7 @@ class Task extends DataClass implements Insertable<Task> {
       parentId: serializer.fromJson<int?>(json['parentId']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      order: serializer.fromJson<int>(json['order']),
     );
   }
   @override
@@ -250,6 +276,7 @@ class Task extends DataClass implements Insertable<Task> {
       'parentId': serializer.toJson<int?>(parentId),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'order': serializer.toJson<int>(order),
     };
   }
 
@@ -260,6 +287,7 @@ class Task extends DataClass implements Insertable<Task> {
     Value<int?> parentId = const Value.absent(),
     DateTime? createdAt,
     DateTime? updatedAt,
+    int? order,
   }) => Task(
     id: id ?? this.id,
     title: title ?? this.title,
@@ -267,6 +295,7 @@ class Task extends DataClass implements Insertable<Task> {
     parentId: parentId.present ? parentId.value : this.parentId,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
+    order: order ?? this.order,
   );
   Task copyWithCompanion(TasksCompanion data) {
     return Task(
@@ -278,6 +307,7 @@ class Task extends DataClass implements Insertable<Task> {
       parentId: data.parentId.present ? data.parentId.value : this.parentId,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      order: data.order.present ? data.order.value : this.order,
     );
   }
 
@@ -289,14 +319,22 @@ class Task extends DataClass implements Insertable<Task> {
           ..write('isCompleted: $isCompleted, ')
           ..write('parentId: $parentId, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('order: $order')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, title, isCompleted, parentId, createdAt, updatedAt);
+  int get hashCode => Object.hash(
+    id,
+    title,
+    isCompleted,
+    parentId,
+    createdAt,
+    updatedAt,
+    order,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -306,7 +344,8 @@ class Task extends DataClass implements Insertable<Task> {
           other.isCompleted == this.isCompleted &&
           other.parentId == this.parentId &&
           other.createdAt == this.createdAt &&
-          other.updatedAt == this.updatedAt);
+          other.updatedAt == this.updatedAt &&
+          other.order == this.order);
 }
 
 class TasksCompanion extends UpdateCompanion<Task> {
@@ -316,6 +355,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
   final Value<int?> parentId;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
+  final Value<int> order;
   const TasksCompanion({
     this.id = const Value.absent(),
     this.title = const Value.absent(),
@@ -323,6 +363,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.parentId = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.order = const Value.absent(),
   });
   TasksCompanion.insert({
     this.id = const Value.absent(),
@@ -331,6 +372,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.parentId = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.order = const Value.absent(),
   }) : title = Value(title);
   static Insertable<Task> custom({
     Expression<int>? id,
@@ -339,6 +381,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Expression<int>? parentId,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
+    Expression<int>? order,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -347,6 +390,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
       if (parentId != null) 'parent_id': parentId,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (order != null) 'order': order,
     });
   }
 
@@ -357,6 +401,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Value<int?>? parentId,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
+    Value<int>? order,
   }) {
     return TasksCompanion(
       id: id ?? this.id,
@@ -365,6 +410,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
       parentId: parentId ?? this.parentId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      order: order ?? this.order,
     );
   }
 
@@ -389,6 +435,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
+    if (order.present) {
+      map['order'] = Variable<int>(order.value);
+    }
     return map;
   }
 
@@ -400,7 +449,8 @@ class TasksCompanion extends UpdateCompanion<Task> {
           ..write('isCompleted: $isCompleted, ')
           ..write('parentId: $parentId, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('order: $order')
           ..write(')'))
         .toString();
   }
@@ -840,6 +890,7 @@ typedef $$TasksTableCreateCompanionBuilder =
       Value<int?> parentId,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
+      Value<int> order,
     });
 typedef $$TasksTableUpdateCompanionBuilder =
     TasksCompanion Function({
@@ -849,6 +900,7 @@ typedef $$TasksTableUpdateCompanionBuilder =
       Value<int?> parentId,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
+      Value<int> order,
     });
 
 final class $$TasksTableReferences
@@ -904,6 +956,11 @@ class $$TasksTableFilterComposer extends Composer<_$AppDatabase, $TasksTable> {
 
   ColumnFilters<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get order => $composableBuilder(
+    column: $table.order,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -965,6 +1022,11 @@ class $$TasksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get order => $composableBuilder(
+    column: $table.order,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$TasksTableOrderingComposer get parentId {
     final $$TasksTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -1014,6 +1076,9 @@ class $$TasksTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get order =>
+      $composableBuilder(column: $table.order, builder: (column) => column);
 
   $$TasksTableAnnotationComposer get parentId {
     final $$TasksTableAnnotationComposer composer = $composerBuilder(
@@ -1073,6 +1138,7 @@ class $$TasksTableTableManager
                 Value<int?> parentId = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> order = const Value.absent(),
               }) => TasksCompanion(
                 id: id,
                 title: title,
@@ -1080,6 +1146,7 @@ class $$TasksTableTableManager
                 parentId: parentId,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                order: order,
               ),
           createCompanionCallback:
               ({
@@ -1089,6 +1156,7 @@ class $$TasksTableTableManager
                 Value<int?> parentId = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> order = const Value.absent(),
               }) => TasksCompanion.insert(
                 id: id,
                 title: title,
@@ -1096,6 +1164,7 @@ class $$TasksTableTableManager
                 parentId: parentId,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                order: order,
               ),
           withReferenceMapper: (p0) => p0
               .map(

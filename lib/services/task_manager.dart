@@ -65,21 +65,44 @@ class TaskManager {
     return await _repo.getSubtasks(int.parse(parentId));
   }
 
-  Future<void> reorderTasks(
-    String? parentId,
-    int oldIndex,
-    int newIndex,
+  Future<void> reorderTaskInList(
+    int? parentId, // Changed to int? to align with domain model
+    int taskId,    // ID of the task being moved
+    int oldIndex,  // Original index in the list (0-based)
+    int newIndex,  // New index in the list (0-based)
   ) async {
-    final tasks = await getTasksAtLevel(parentId);
+    // Fetch the current list of tasks for the given parent, already sorted by order
+    final tasks = await (parentId == null
+        ? _repo.getRootTasks()
+        : _repo.getSubtasks(parentId));
 
-    if (oldIndex < 0 ||
-        oldIndex >= tasks.length ||
-        newIndex < 0 ||
-        newIndex >= tasks.length) {
+    if (oldIndex < 0 || oldIndex >= tasks.length || newIndex < 0 || newIndex >= tasks.length) {
+      // Index out of bounds, though newIndex can be tasks.length for moving to the end.
+      // For simplicity, we'll assume newIndex is also within current bounds for now.
+      // A more robust check might be needed if newIndex can be tasks.length.
+      print("ReorderTaskInList: Invalid indices old: $oldIndex, new: $newIndex, length: ${tasks.length}");
       return;
     }
 
-    final task = tasks.removeAt(oldIndex);
-    tasks.insert(newIndex, task);
+    // Find the task being moved. The list is 0-indexed, matching oldIndex.
+    final taskToMove = tasks.removeAt(oldIndex);
+
+    // Insert it at the new position.
+    tasks.insert(newIndex, taskToMove);
+
+    // Update the 'order' property for all tasks in this list.
+    // The 'order' should now reflect their new position in the 'tasks' list.
+    // We can use 1-based ordering for the database, or 0-based if preferred.
+    // Let's use 1-based to match the repository's createTask logic.
+    final List<domain.Task> updatedTasks = [];
+    for (int i = 0; i < tasks.length; i++) {
+      if (tasks[i].order != (i + 1)) {
+        updatedTasks.add(tasks[i].copyWith(order: i + 1));
+      }
+    }
+
+    if (updatedTasks.isNotEmpty) {
+      await _repo.updateTaskOrderInBatch(updatedTasks);
+    }
   }
 }
