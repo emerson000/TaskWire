@@ -6,6 +6,7 @@ class BreadcrumbNavigation extends StatelessWidget {
   final Function(Task?) onNavigate;
   final Function(Task, Task?)? onTaskDrop;
   final bool isDragging;
+  final int currentPageIndex;
 
   const BreadcrumbNavigation({
     super.key,
@@ -13,14 +14,11 @@ class BreadcrumbNavigation extends StatelessWidget {
     required this.onNavigate,
     this.onTaskDrop,
     this.isDragging = false,
+    this.currentPageIndex = 0,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (breadcrumbs.length <= 1) {
-      return const SizedBox.shrink();
-    }
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       decoration: BoxDecoration(
@@ -53,13 +51,14 @@ class BreadcrumbNavigation extends StatelessWidget {
     for (int i = 0; i < breadcrumbs.length; i++) {
       final task = breadcrumbs[i];
       final isLast = i == breadcrumbs.length - 1;
+      final isCurrentPage = i == currentPageIndex;
 
       Widget breadcrumbContent = GestureDetector(
         onTap: isLast ? null : () => onNavigate(task),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
           decoration: BoxDecoration(
-            color: isLast
+            color: isCurrentPage
                 ? Theme.of(context).colorScheme.primaryContainer
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(4.0),
@@ -67,10 +66,10 @@ class BreadcrumbNavigation extends StatelessWidget {
           child: Text(
             task?.title ?? 'Home',
             style: TextStyle(
-              color: isLast
+              color: isCurrentPage
                   ? Theme.of(context).colorScheme.onPrimaryContainer
                   : Theme.of(context).colorScheme.primary,
-              fontWeight: isLast ? FontWeight.bold : FontWeight.normal,
+              fontWeight: isCurrentPage ? FontWeight.bold : FontWeight.normal,
             ),
           ),
         ),

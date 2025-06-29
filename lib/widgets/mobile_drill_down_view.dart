@@ -60,7 +60,9 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView>
   Task? _currentParent;
   List<Task?> _breadcrumbs = [null];
   bool _isDragging = false;
-  Future<List<Task>>? _currentTasksFuture;
+  final PageController _pageController = PageController(initialPage: 0);
+  int _currentPageIndex = 0;
+  bool _isNavigatingProgrammatically = false;
 
   @override
   TaskManager get taskManager => widget.taskManager;
@@ -68,12 +70,10 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView>
   @override
   PrinterService get printerService => widget.printerService;
 
-  Future<List<Task>> _getCurrentTasks() {
-    return widget.taskManager.getTasksAtLevel(_currentParent?.id.toString());
-  }
-
-  void _refreshTasks() {
-    _currentTasksFuture = _getCurrentTasks();
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   Future<void> _printCurrentLevel() async {
@@ -112,12 +112,9 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView>
     );
   }
 
-
-
   @override
   void initState() {
     super.initState();
-    _refreshTasks();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       widget.onParentChange?.call(null, 0);
     });
@@ -130,38 +127,119 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView>
         widget.editingTaskId != oldWidget.editingTaskId ||
         widget.refreshKey != oldWidget.refreshKey) {
       setState(() {
-        _refreshTasks();
+        // No refresh needed with PageView
       });
     }
   }
 
-  void _navigateToSubtasks(Task parentTask) {
-    setState(() {
-      _currentParent = parentTask;
-      _breadcrumbs.add(parentTask);
-      _refreshTasks();
+  void _navigateToSubtasks(Task parentTask) async {
+    _isNavigatingProgrammatically = true;
+    
+    final existingIndex = _breadcrumbs.indexWhere((task) => task?.id == parentTask.id);
+    
+    if (existingIndex != -1) {
+      setState(() {
+        _currentParent = parentTask;
+        _breadcrumbs = _breadcrumbs.sublist(0, existingIndex + 1);
+        _currentPageIndex = existingIndex;
+      });
+    } else {
+      final newHierarchy = <Task?>[null];
+      
+      var currentTask = await widget.taskManager.findTaskById(parentTask.id);
+      final ancestors = <Task>[];
+      if (currentTask != null) {
+        while (currentTask?.parentId != null) {
+          final parent = await widget.taskManager.findTaskById(
+            currentTask!.parentId!,
+          );
+          if (parent != null) {
+            ancestors.insert(0, parent);
+            currentTask = parent;
+          } else {
+            break;
+          }
+        }
+      }
+      newHierarchy.addAll(ancestors);
+      newHierarchy.add(parentTask);
+      
+      setState(() {
+        _currentParent = parentTask;
+        _breadcrumbs = newHierarchy;
+        _currentPageIndex = _breadcrumbs.length - 1;
+      });
+    }
+    
+    widget.onParentChange?.call(parentTask, _currentPageIndex);
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_pageController.hasClients && _pageController.page?.round() != _currentPageIndex) {
+        _pageController.animateToPage(
+          _currentPageIndex,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        ).then((_) {
+          Future.delayed(const Duration(milliseconds: 50), () {
+            _isNavigatingProgrammatically = false;
+          });
+        });
+      } else {
+        Future.delayed(const Duration(milliseconds: 50), () {
+          _isNavigatingProgrammatically = false;
+        });
+      }
     });
-    widget.onParentChange?.call(parentTask, _breadcrumbs.length - 1);
   }
 
   void _navigateUp(Task? targetParent) {
+    final targetIndex = _breadcrumbs.indexOf(targetParent);
+    if (targetIndex == -1) return;
+    
+    _isNavigatingProgrammatically = true;
+    
     setState(() {
       _currentParent = targetParent;
-
-      final targetIndex = _breadcrumbs.indexOf(targetParent);
-      if (targetIndex != -1) {
-        _breadcrumbs = _breadcrumbs.sublist(0, targetIndex + 1);
-      }
-      _refreshTasks();
+      _breadcrumbs = _breadcrumbs.sublist(0, targetIndex + 1);
+      _currentPageIndex = targetIndex;
     });
-    widget.onParentChange?.call(targetParent, targetParent != null ? _breadcrumbs.indexOf(targetParent) : 0);
+    
+    widget.onParentChange?.call(targetParent, targetIndex);
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_pageController.hasClients && _pageController.page?.round() != _currentPageIndex) {
+        _pageController.animateToPage(
+          _currentPageIndex,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        ).then((_) {
+          Future.delayed(const Duration(milliseconds: 50), () {
+            _isNavigatingProgrammatically = false;
+          });
+        });
+      } else {
+        Future.delayed(const Duration(milliseconds: 50), () {
+          _isNavigatingProgrammatically = false;
+        });
+      }
+    });
+  }
+
+  void _onPageChanged(int pageIndex) {
+    if (!_isNavigatingProgrammatically && pageIndex < _breadcrumbs.length && pageIndex != _currentPageIndex) {
+      setState(() {
+        _currentPageIndex = pageIndex;
+        _currentParent = _breadcrumbs[pageIndex];
+      });
+      widget.onParentChange?.call(_currentParent, pageIndex);
+    }
   }
 
   void _onTaskDrop(Task draggedTask, Task targetTask) async {
     await handleTaskDrop(
       draggedTask: draggedTask,
       targetTask: targetTask,
-      onRefresh: () => setState(() => _refreshTasks()),
+      onRefresh: () => setState(() {}),
     );
   }
 
@@ -169,7 +247,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView>
     await handleParentDrop(
       draggedTask: draggedTask,
       targetParent: targetParent,
-      onRefresh: () => setState(() => _refreshTasks()),
+      onRefresh: () => setState(() {}),
     );
   }
 
@@ -199,6 +277,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView>
                 onNavigate: _navigateUp,
                 onTaskDrop: _onBreadcrumbDrop,
                 isDragging: _isDragging,
+                currentPageIndex: _currentPageIndex,
               ),
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -228,50 +307,62 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView>
                 ),
               ),
               Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.primaryContainer.withValues(alpha: 0.1),
-                  ),
-                  child: FutureBuilder<List<Task>>(
-                    future: _currentTasksFuture,
-                    builder: (context, snapshot) {
-                      if (snapshot.hasError) {
-                        return Center(child: Text('Error: ${snapshot.error}'));
-                      }
-                      if (!snapshot.hasData) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                      final tasks = snapshot.data!;
-                      return SharedTaskList(
-                        tasks: tasks,
-                        parent: _currentParent,
-                        editingTaskId: widget.editingTaskId,
-                        editController: widget.editController,
-                        showAddTask: widget.showAddTask,
-                        addTaskParentId: widget.addTaskParentId,
-                        onTaskTap: _navigateToSubtasks,
-                        onStartEditing: widget.onStartEditing,
-                        onDeleteTask: widget.onDeleteTask,
-                        onUpdateTask: widget.onUpdateTask,
-                        onFinishEditing: widget.onFinishEditing,
-                        onEditCancel: widget.onEditCancel,
-                        onTaskDrop: _onTaskDrop,
-                        onCreateTask: widget.onCreateTask,
-                        onAddMultipleTasks: widget.onAddMultipleTasks,
-                        onHideAddTask: widget.onHideAddTask,
-                        onAddTask: widget.onAddTask,
-                        isDesktop: false,
-                      );
-                    },
-                  ),
+                child: PageView.builder(
+                  controller: _pageController,
+                  onPageChanged: _onPageChanged,
+                  itemCount: _breadcrumbs.length,
+                  itemBuilder: (context, pageIndex) {
+                    final parent = _breadcrumbs[pageIndex];
+                    return _buildPageContent(parent, pageIndex);
+                  },
                 ),
               ),
             ],
           ),
         );
       },
+    );
+  }
+
+  Widget _buildPageContent(Task? parent, int pageIndex) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(
+          context,
+        ).colorScheme.primaryContainer.withValues(alpha: 0.1),
+      ),
+      child: FutureBuilder<List<Task>>(
+        future: widget.taskManager.getTasksAtLevel(parent?.id.toString()),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final tasks = snapshot.data!;
+          return SharedTaskList(
+            tasks: tasks,
+            parent: parent,
+            editingTaskId: widget.editingTaskId,
+            editController: widget.editController,
+            showAddTask: widget.showAddTask,
+            addTaskParentId: widget.addTaskParentId,
+            onTaskTap: _navigateToSubtasks,
+            onStartEditing: widget.onStartEditing,
+            onDeleteTask: widget.onDeleteTask,
+            onUpdateTask: widget.onUpdateTask,
+            onFinishEditing: widget.onFinishEditing,
+            onEditCancel: widget.onEditCancel,
+            onTaskDrop: _onTaskDrop,
+            onCreateTask: widget.onCreateTask,
+            onAddMultipleTasks: widget.onAddMultipleTasks,
+            onHideAddTask: widget.onHideAddTask,
+            onAddTask: widget.onAddTask,
+            isDesktop: false,
+          );
+        },
+      ),
     );
   }
 }
