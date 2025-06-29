@@ -19,6 +19,7 @@ class MobileDrillDownView extends StatefulWidget {
   final TextEditingController editController;
   final Function(String?, String?, {int? columnIndex}) onAddTask;
   final Function(String, String?) onCreateTask;
+  final Function(List<String>, String?)? onAddMultipleTasks;
   final VoidCallback onHideAddTask;
   final bool showAddTask;
   final String? addTaskParentId;
@@ -40,6 +41,7 @@ class MobileDrillDownView extends StatefulWidget {
     required this.editController,
     required this.onAddTask,
     required this.onCreateTask,
+    this.onAddMultipleTasks,
     required this.onHideAddTask,
     required this.showAddTask,
     this.addTaskParentId,
@@ -495,6 +497,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView> {
                                     parentId: _currentParent?.id.toString(),
                                     parentTitle: _currentParent?.title,
                                     onAddTask: widget.onCreateTask,
+                                    onAddMultipleTasks: widget.onAddMultipleTasks,
                                     onCancel: widget.onHideAddTask,
                                   );
                                 }

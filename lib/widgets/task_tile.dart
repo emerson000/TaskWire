@@ -326,6 +326,7 @@ class AddTaskTile extends StatefulWidget {
   final String? parentId;
   final String? parentTitle;
   final Function(String taskTitle, String? parentId) onAddTask;
+  final Function(List<String> taskTitles, String? parentId)? onAddMultipleTasks;
   final VoidCallback? onCancel;
 
   const AddTaskTile({
@@ -333,6 +334,7 @@ class AddTaskTile extends StatefulWidget {
     this.parentId,
     this.parentTitle,
     required this.onAddTask,
+    this.onAddMultipleTasks,
     this.onCancel,
   });
 
@@ -360,21 +362,121 @@ class _AddTaskTileState extends State<AddTaskTile> {
     super.dispose();
   }
 
+  List<String> _parseMultiLineText(String text) {
+    final lines = text.split('\n');
+    final tasks = <String>[];
+    
+    for (final line in lines) {
+      final trimmedLine = line.trim();
+      if (trimmedLine.isNotEmpty) {
+        final cleanedLine = _cleanMarkdownBullets(trimmedLine);
+        if (cleanedLine.isNotEmpty) {
+          tasks.add(cleanedLine);
+        }
+      }
+    }
+    
+    return tasks;
+  }
+
+  String _cleanMarkdownBullets(String text) {
+    return text
+        .replaceAll(RegExp(r'^[\s]*[-*+]\s*'), '')
+        .replaceAll(RegExp(r'^[\s]*\d+\.\s*'), '')
+        .trim();
+  }
+
   Future<void> _submitTask() async {
     if (_controller.text.trim().isEmpty) return;
 
+    final text = _controller.text.trim();
+    final tasks = _parseMultiLineText(text);
+
+    if (tasks.length == 1) {
+      await _createSingleTask(tasks.first);
+    } else if (tasks.length > 1) {
+      await _promptForMultipleTasks(tasks);
+    }
+  }
+
+  Future<void> _createSingleTask(String taskTitle) async {
     setState(() {
       _isAdding = true;
     });
 
     try {
-      await widget.onAddTask(_controller.text.trim(), widget.parentId);
+      await widget.onAddTask(taskTitle, widget.parentId);
       _controller.clear();
       _focusNode.requestFocus();
     } finally {
       setState(() {
         _isAdding = false;
       });
+    }
+  }
+
+  Future<void> _promptForMultipleTasks(List<String> taskTitles) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Create Multiple Tasks'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('The pasted text contains ${taskTitles.length} lines. Would you like to create ${taskTitles.length} separate tasks?'),
+            const SizedBox(height: 16),
+            const Text('Preview:', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Container(
+              constraints: const BoxConstraints(maxHeight: 200),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: taskTitles.map((taskTitle) => 
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Text('• $taskTitle'),
+                    )
+                  ).toList(),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Create Tasks'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      setState(() {
+        _isAdding = true;
+      });
+
+      try {
+        if (widget.onAddMultipleTasks != null) {
+          await widget.onAddMultipleTasks!(taskTitles, widget.parentId);
+        } else {
+          for (final taskTitle in taskTitles) {
+            await widget.onAddTask(taskTitle, widget.parentId);
+          }
+        }
+        _controller.clear();
+        _focusNode.requestFocus();
+      } finally {
+        setState(() {
+          _isAdding = false;
+        });
+      }
     }
   }
 
@@ -389,11 +491,21 @@ class _AddTaskTileState extends State<AddTaskTile> {
     }
   }
 
+  void _handleTextFieldKeyEvent(KeyEvent event) {
+    if (event is KeyDownEvent) {
+      if (event.logicalKey == LogicalKeyboardKey.enter && !HardwareKeyboard.instance.isShiftPressed) {
+        _submitTask();
+      } else if (event.logicalKey == LogicalKeyboardKey.escape) {
+        _cancel();
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return KeyboardListener(
       focusNode: FocusNode(),
-      onKeyEvent: _handleKeyEvent,
+      onKeyEvent: _handleTextFieldKeyEvent,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         child: Row(
@@ -410,6 +522,7 @@ class _AddTaskTileState extends State<AddTaskTile> {
                 autofocus: true,
                 enabled: !_isAdding,
                 textCapitalization: TextCapitalization.sentences,
+                maxLines: null,
                 decoration: InputDecoration(
                   isDense: true,
                   contentPadding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -418,13 +531,6 @@ class _AddTaskTileState extends State<AddTaskTile> {
                       : 'Add new task',
                   border: InputBorder.none,
                 ),
-                onSubmitted: (value) {
-                  if (value.trim().isEmpty) {
-                    _cancel();
-                  } else {
-                    _submitTask();
-                  }
-                },
               ),
             ),
             if (_isAdding)

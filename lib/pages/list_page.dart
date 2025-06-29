@@ -74,6 +74,26 @@ class _ListPageState extends State<ListPage> {
     }
   }
 
+  Future<void> _addMultipleTasks(List<String> taskTitles, String? parentId) async {
+    try {
+      for (final taskTitle in taskTitles) {
+        if (taskTitle.trim().isNotEmpty) {
+          await _taskManager.createTask(
+            taskTitle.trim(),
+            parentId: parentId != null ? int.parse(parentId) : null,
+          );
+        }
+      }
+      setState(() {
+        _refreshCounter++;
+      });
+    } catch (e) {
+      if (kDebugMode) {
+        LoggingService.error('Error creating multiple tasks: $e');
+      }
+    }
+  }
+
   void _showAddTaskInline(String? parentId, String? parentTitle, {int? columnIndex}) {
     setState(() {
       _showAddTask = true;
@@ -201,6 +221,7 @@ class _ListPageState extends State<ListPage> {
       editController: _editController,
       onAddTask: _showAddTaskInline,
       onCreateTask: _addTask,
+      onAddMultipleTasks: _addMultipleTasks,
       showAddTask: _showAddTask,
       addTaskParentId: _addTaskParentId,
       addTaskParentTitle: _addTaskParentTitle,
@@ -224,6 +245,7 @@ class _ListPageState extends State<ListPage> {
       editController: _editController,
       onAddTask: _showAddTaskInline,
       onCreateTask: _addTask,
+      onAddMultipleTasks: _addMultipleTasks,
       onHideAddTask: _hideAddTaskInline,
       showAddTask: _showAddTask,
       addTaskParentId: _addTaskParentId,

@@ -20,6 +20,7 @@ class DesktopColumnView extends StatefulWidget {
   final TextEditingController editController;
   final Function(String?, String?, {int? columnIndex}) onAddTask;
   final Function(String, String?) onCreateTask;
+  final Function(List<String>, String?)? onAddMultipleTasks;
   final bool showAddTask;
   final String? addTaskParentId;
   final String? addTaskParentTitle;
@@ -41,6 +42,7 @@ class DesktopColumnView extends StatefulWidget {
     required this.editController,
     required this.onAddTask,
     required this.onCreateTask,
+    this.onAddMultipleTasks,
     required this.showAddTask,
     this.addTaskParentId,
     this.addTaskParentTitle,
@@ -590,6 +592,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView> {
                                 parentId: parent?.id.toString(),
                                 parentTitle: parent?.title,
                                 onAddTask: widget.onCreateTask,
+                                onAddMultipleTasks: widget.onAddMultipleTasks,
                                 onCancel: widget.onHideAddTask,
                               );
                             }
