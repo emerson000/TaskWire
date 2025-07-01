@@ -381,6 +381,7 @@ class _AddTaskTileState extends State<AddTaskTile> {
 
   String _cleanMarkdownBullets(String text) {
     return text
+        .replaceAll(RegExp(r'^[\s]*[-*+]\s*\[[\sXx]\]\s*'), '')
         .replaceAll(RegExp(r'^[\s]*[-*+]\s*'), '')
         .replaceAll(RegExp(r'^[\s]*\d+\.\s*'), '')
         .trim();
