@@ -63,7 +63,7 @@ class SharedTaskList extends StatelessWidget {
         onAddTask: () => onAddTask(
           parent?.id.toString(),
           parent?.title,
-          columnIndex: isDesktop ? 0 : null,
+          columnIndex: isDesktop ? columnIndex : null,
         ),
         isDesktop: isDesktop,
       );
