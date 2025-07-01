@@ -23,6 +23,8 @@ class SharedTaskList extends StatelessWidget {
   final Function(String?, String?, {int? columnIndex}) onAddTask;
   final bool isDesktop;
   final bool Function(Task)? isSelected;
+  final int? targetColumnIndex;
+  final int? columnIndex;
 
   const SharedTaskList({
     super.key,
@@ -45,12 +47,15 @@ class SharedTaskList extends StatelessWidget {
     required this.onAddTask,
     this.isDesktop = false,
     this.isSelected,
+    this.targetColumnIndex,
+    this.columnIndex,
   });
 
   @override
   Widget build(BuildContext context) {
-    final shouldShowAddTask = showAddTask && 
-        addTaskParentId == parent?.id.toString();
+    final shouldShowAddTask = isDesktop 
+        ? showAddTask && targetColumnIndex == columnIndex
+        : showAddTask && addTaskParentId == parent?.id.toString();
 
     if (tasks.isEmpty && !shouldShowAddTask) {
       return ZeroState(

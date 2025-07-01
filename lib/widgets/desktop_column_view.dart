@@ -389,6 +389,8 @@ class _DesktopColumnViewState extends State<DesktopColumnView>
                     onAddTask: widget.onAddTask,
                     isDesktop: true,
                     isSelected: (task) => _columnHierarchy.contains(task),
+                    targetColumnIndex: widget.addTaskColumnIndex,
+                    columnIndex: columnIndex,
                   ),
                 );
               },
