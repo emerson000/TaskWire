@@ -517,6 +517,7 @@ class _AddTaskTileState extends State<AddTaskTile> {
                 enabled: !_isAdding,
                 textCapitalization: TextCapitalization.sentences,
                 maxLines: null,
+                textInputAction: TextInputAction.done,
                 decoration: InputDecoration(
                   isDense: true,
                   contentPadding: const EdgeInsets.symmetric(vertical: 8.0),
