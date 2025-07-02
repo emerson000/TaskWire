@@ -50,7 +50,7 @@ class TaskTile extends StatelessWidget {
 
   Widget _buildDraggableWidget(BuildContext context) {
     final isWindows = defaultTargetPlatform == TargetPlatform.windows;
-    
+
     if (isWindows) {
       return Draggable<Task>(
         data: task,
@@ -91,8 +91,9 @@ class TaskTile extends StatelessWidget {
               child: Text(
                 task.title,
                 style: TextStyle(
-                  decoration:
-                      task.isCompleted ? TextDecoration.lineThrough : null,
+                  decoration: task.isCompleted
+                      ? TextDecoration.lineThrough
+                      : null,
                 ),
               ),
             ),
@@ -107,10 +108,7 @@ class TaskTile extends StatelessWidget {
   }
 
   Widget _buildChildWhenDragging(BuildContext context) {
-    return Opacity(
-      opacity: 0.5,
-      child: _buildNormalTile(context),
-    );
+    return Opacity(opacity: 0.5, child: _buildNormalTile(context));
   }
 
   Widget _buildDragTarget(BuildContext context) {
@@ -124,10 +122,9 @@ class TaskTile extends StatelessWidget {
           duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
             color: candidateData.isNotEmpty
-                ? Theme.of(context)
-                    .colorScheme
-                    .primaryContainer
-                    .withValues(alpha: 0.3)
+                ? Theme.of(
+                    context,
+                  ).colorScheme.primaryContainer.withValues(alpha: 0.3)
                 : null,
             borderRadius: BorderRadius.circular(8.0),
           ),
@@ -138,10 +135,11 @@ class TaskTile extends StatelessWidget {
   }
 
   Widget _buildNormalTile(BuildContext context) {
-    final isDesktop = defaultTargetPlatform == TargetPlatform.windows || 
-                     defaultTargetPlatform == TargetPlatform.macOS || 
-                     defaultTargetPlatform == TargetPlatform.linux;
-    
+    final isDesktop =
+        defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.linux;
+
     Widget tileContent = _TaskTileContent(
       task: task,
       isSelected: isSelected,
@@ -149,13 +147,16 @@ class TaskTile extends StatelessWidget {
       onEdit: onEdit,
       onTap: onTap,
       onReorderDragStart: onReorderDragStart,
-      backgroundColor: isSelected ? Theme.of(context).colorScheme.surfaceContainer : null,
+      backgroundColor: isSelected
+          ? Theme.of(context).colorScheme.surfaceContainer
+          : null,
       reorderIndex: reorderIndex,
     );
 
     if (isDesktop) {
       return GestureDetector(
-        onSecondaryTapDown: (TapDownDetails details) => _showContextMenu(context, details.globalPosition),
+        onSecondaryTapDown: (TapDownDetails details) =>
+            _showContextMenu(context, details.globalPosition),
         child: tileContent,
       );
     } else {
@@ -166,10 +167,7 @@ class TaskTile extends StatelessWidget {
           alignment: Alignment.centerRight,
           padding: const EdgeInsets.only(right: 20.0),
           color: Theme.of(context).colorScheme.error,
-          child: const Icon(
-            Icons.delete,
-            color: Colors.white,
-          ),
+          child: const Icon(Icons.delete, color: Colors.white),
         ),
         confirmDismiss: (direction) async {
           onDelete?.call();
@@ -181,7 +179,8 @@ class TaskTile extends StatelessWidget {
   }
 
   void _showContextMenu(BuildContext context, Offset position) {
-    final RenderBox overlay = Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
+    final RenderBox overlay =
+        Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
     final RelativeRect menuPosition = RelativeRect.fromLTRB(
       position.dx,
       position.dy,
@@ -207,16 +206,9 @@ class TaskTile extends StatelessWidget {
           value: 'delete',
           child: Row(
             children: [
-              Icon(
-                Icons.delete,
-                size: 16,
-                color: Colors.red,
-              ),
+              Icon(Icons.delete, size: 16, color: Colors.red),
               const SizedBox(width: 8),
-              Text(
-                'Delete',
-                style: TextStyle(color: Colors.red),
-              ),
+              Text('Delete', style: TextStyle(color: Colors.red)),
             ],
           ),
         ),
@@ -235,7 +227,8 @@ class TaskTile extends StatelessWidget {
 
   Widget _buildEditingTile(BuildContext context) {
     void handleKeyEvent(KeyEvent event) {
-      if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
+      if (event is KeyDownEvent &&
+          event.logicalKey == LogicalKeyboardKey.escape) {
         onEditCancel?.call();
       }
     }
@@ -247,10 +240,7 @@ class TaskTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         child: Row(
           children: [
-            Checkbox(
-              value: task.isCompleted,
-              onChanged: onCheckboxChanged,
-            ),
+            Checkbox(value: task.isCompleted, onChanged: onCheckboxChanged),
             const SizedBox(width: 16),
             Expanded(
               child: TextField(
@@ -324,7 +314,7 @@ class _TaskTileContent extends StatefulWidget {
 }
 
 class _TaskTileContentState extends State<_TaskTileContent> {
-  bool _isDragHandleHovered = false;
+  bool _isTileHovered = false;
 
   @override
   Widget build(BuildContext context) {
@@ -332,33 +322,40 @@ class _TaskTileContentState extends State<_TaskTileContent> {
       color: widget.backgroundColor,
       child: Material(
         color: Colors.transparent,
-        child: InkWell(
-          onTap: widget.onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            child: Row(
-              children: [
-                MouseRegion(
-                  onEnter: (_) => setState(() => _isDragHandleHovered = true),
-                  onExit: (_) => setState(() => _isDragHandleHovered = false),
-                                    child: widget.reorderIndex != null 
+        child: MouseRegion(
+          onEnter: (_) => setState(() => _isTileHovered = true),
+          onExit: (_) => setState(() => _isTileHovered = false),
+          child: InkWell(
+            onTap: widget.onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 8.0,
+              ),
+              child: Row(
+                children: [
+                  widget.reorderIndex != null
                       ? ReorderableDragStartListener(
                           index: widget.reorderIndex!,
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 150),
                             padding: const EdgeInsets.all(4.0),
                             decoration: BoxDecoration(
-                              color: _isDragHandleHovered
-                                  ? Theme.of(context).colorScheme.surfaceContainer
+                              color: _isTileHovered
+                                  ? Theme.of(
+                                      context,
+                                    ).colorScheme.surfaceContainer
                                   : Colors.transparent,
                               borderRadius: BorderRadius.circular(4.0),
                             ),
-                            child: Icon(
-                              Icons.drag_handle,
-                              color: _isDragHandleHovered
-                                  ? Theme.of(context).colorScheme.onSurface
-                                  : Theme.of(context).colorScheme.outline,
-                              size: 20,
+                            child: AnimatedOpacity(
+                              duration: const Duration(milliseconds: 150),
+                              opacity: _isTileHovered ? 1.0 : 0.0,
+                              child: Icon(
+                                Icons.drag_handle,
+                                color: Theme.of(context).colorScheme.onSurface,
+                                size: 20,
+                              ),
                             ),
                           ),
                         )
@@ -366,67 +363,71 @@ class _TaskTileContentState extends State<_TaskTileContent> {
                           duration: const Duration(milliseconds: 150),
                           padding: const EdgeInsets.all(4.0),
                           decoration: BoxDecoration(
-                            color: _isDragHandleHovered
+                            color: _isTileHovered
                                 ? Theme.of(context).colorScheme.surfaceContainer
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(4.0),
                           ),
-                          child: Icon(
-                            Icons.drag_handle,
-                            color: _isDragHandleHovered
-                                ? Theme.of(context).colorScheme.onSurface
-                                : Theme.of(context).colorScheme.outline,
-                            size: 20,
+                          child: AnimatedOpacity(
+                            duration: const Duration(milliseconds: 150),
+                            opacity: _isTileHovered ? 1.0 : 0.0,
+                            child: Icon(
+                              Icons.drag_handle,
+                              color: Theme.of(context).colorScheme.onSurface,
+                              size: 20,
+                            ),
                           ),
                         ),
-                ),
-                const SizedBox(width: 8),
-                Checkbox(
-                  value: widget.task.isCompleted,
-                  onChanged: widget.onCheckboxChanged,
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.task.title,
-                        style: TextStyle(
-                          decoration: widget.task.isCompleted
-                              ? TextDecoration.lineThrough
-                              : null,
-                          color: widget.task.isCompleted
-                              ? Theme.of(context).colorScheme.onSurfaceVariant
-                              : null,
-                        ),
-                      ),
-                      if (widget.task.hasSubtasks)
+                  const SizedBox(width: 8),
+                  Checkbox(
+                    value: widget.task.isCompleted,
+                    onChanged: widget.onCheckboxChanged,
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          '${widget.task.subtaskCount} subtask${widget.task.subtaskCount == 1 ? '' : 's'}',
+                          widget.task.title,
                           style: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            fontSize: 12,
+                            decoration: widget.task.isCompleted
+                                ? TextDecoration.lineThrough
+                                : null,
+                            color: widget.task.isCompleted
+                                ? Theme.of(context).colorScheme.onSurfaceVariant
+                                : null,
                           ),
                         ),
+                        if (widget.task.hasSubtasks)
+                          Text(
+                            '${widget.task.subtaskCount} subtask${widget.task.subtaskCount == 1 ? '' : 's'}',
+                            style: TextStyle(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                              fontSize: 12,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (widget.task.hasSubtasks)
+                        Icon(
+                          Icons.chevron_right,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      IconButton(
+                        icon: const Icon(Icons.edit),
+                        onPressed: widget.onEdit,
+                      ),
                     ],
                   ),
-                ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (widget.task.hasSubtasks)
-                      Icon(
-                        Icons.chevron_right,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    IconButton(
-                      icon: const Icon(Icons.edit),
-                      onPressed: widget.onEdit,
-                    ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -478,7 +479,7 @@ class _AddTaskTileState extends State<AddTaskTile> {
   List<String> _parseMultiLineText(String text) {
     final lines = text.split('\n');
     final tasks = <String>[];
-    
+
     for (final line in lines) {
       final trimmedLine = line.trim();
       if (trimmedLine.isNotEmpty) {
@@ -488,7 +489,7 @@ class _AddTaskTileState extends State<AddTaskTile> {
         }
       }
     }
-    
+
     return tasks;
   }
 
@@ -538,21 +539,28 @@ class _AddTaskTileState extends State<AddTaskTile> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('The pasted text contains ${taskTitles.length} lines. Would you like to create ${taskTitles.length} separate tasks?'),
+            Text(
+              'The pasted text contains ${taskTitles.length} lines. Would you like to create ${taskTitles.length} separate tasks?',
+            ),
             const SizedBox(height: 16),
-            const Text('Preview:', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text(
+              'Preview:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 8),
             Container(
               constraints: const BoxConstraints(maxHeight: 200),
               child: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: taskTitles.map((taskTitle) => 
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 2),
-                      child: Text('• $taskTitle'),
-                    )
-                  ).toList(),
+                  children: taskTitles
+                      .map(
+                        (taskTitle) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: Text('• $taskTitle'),
+                        ),
+                      )
+                      .toList(),
                 ),
               ),
             ),
@@ -601,7 +609,8 @@ class _AddTaskTileState extends State<AddTaskTile> {
 
   void _handleTextFieldKeyEvent(KeyEvent event) {
     if (event is KeyDownEvent) {
-      if (event.logicalKey == LogicalKeyboardKey.enter && !HardwareKeyboard.instance.isShiftPressed) {
+      if (event.logicalKey == LogicalKeyboardKey.enter &&
+          !HardwareKeyboard.instance.isShiftPressed) {
         _submitTask();
       } else if (event.logicalKey == LogicalKeyboardKey.escape) {
         _cancel();
@@ -649,14 +658,8 @@ class _AddTaskTileState extends State<AddTaskTile> {
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
             else ...[
-              IconButton(
-                icon: const Icon(Icons.check),
-                onPressed: _submitTask,
-              ),
-              IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: _cancel,
-              ),
+              IconButton(icon: const Icon(Icons.check), onPressed: _submitTask),
+              IconButton(icon: const Icon(Icons.close), onPressed: _cancel),
             ],
           ],
         ),
