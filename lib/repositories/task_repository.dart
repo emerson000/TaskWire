@@ -39,9 +39,11 @@ class TaskRepository {
   }
 
   Future<domain.Task> createTask(String title, {int? parentId}) async {
+    final maxOrder = await _getMaxOrderForParent(parentId);
     final companion = TasksCompanion.insert(
       title: title,
       parentId: parentId == null ? const Value.absent() : Value(parentId),
+      order: Value(maxOrder + 1),
     );
 
     final id = await _database.insertTask(companion);
@@ -103,9 +105,35 @@ class TaskRepository {
       title: dbTask.title,
       isCompleted: dbTask.isCompleted,
       parentId: dbTask.parentId,
+      order: dbTask.order,
       subtasks: subtasks,
       createdAt: dbTask.createdAt,
       updatedAt: dbTask.updatedAt,
     );
+  }
+
+  Future<int> _getMaxOrderForParent(int? parentId) async {
+    final query = _database.select(_database.tasks);
+    if (parentId == null) {
+      query.where((t) => t.parentId.isNull());
+    } else {
+      query.where((t) => t.parentId.equals(parentId));
+    }
+    query.orderBy([(t) => OrderingTerm.desc(t.order)]);
+    query.limit(1);
+    
+    final result = await query.getSingleOrNull();
+    return result?.order ?? 0;
+  }
+
+  Future<void> reorderTasks(List<domain.Task> tasks, {int? parentId}) async {
+    for (int i = 0; i < tasks.length; i++) {
+      final companion = TasksCompanion(
+        id: Value(tasks[i].id),
+        order: Value(i),
+        updatedAt: Value(DateTime.now()),
+      );
+      await _database.updateTask(companion);
+    }
   }
 }

@@ -16,6 +16,9 @@ class TaskTile extends StatelessWidget {
   final VoidCallback? onEditCancel;
   final bool isDragTarget;
   final Function(Task)? onDragAccept;
+  final Function(Task)? onReorderDragStart;
+  final Function(Task, Task)? onReorderDragAccept;
+  final int? reorderIndex;
 
   const TaskTile({
     super.key,
@@ -31,6 +34,9 @@ class TaskTile extends StatelessWidget {
     this.onEditCancel,
     this.isDragTarget = false,
     this.onDragAccept,
+    this.onReorderDragStart,
+    this.onReorderDragAccept,
+    this.reorderIndex,
   });
 
   @override
@@ -136,45 +142,15 @@ class TaskTile extends StatelessWidget {
                      defaultTargetPlatform == TargetPlatform.macOS || 
                      defaultTargetPlatform == TargetPlatform.linux;
     
-    Widget tileContent = ListTile(
-      tileColor: isSelected ? Theme.of(context).colorScheme.surfaceContainer : null,
-      leading: Checkbox(
-        value: task.isCompleted,
-        onChanged: onCheckboxChanged,
-      ),
-      title: Text(
-        task.title,
-        style: TextStyle(
-          decoration: task.isCompleted ? TextDecoration.lineThrough : null,
-          color: task.isCompleted
-              ? Theme.of(context).colorScheme.onSurfaceVariant
-              : null,
-        ),
-      ),
-      subtitle: task.hasSubtasks
-          ? Text(
-              '${task.subtaskCount} subtask${task.subtaskCount == 1 ? '' : 's'}',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                fontSize: 12,
-              ),
-            )
-          : null,
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (task.hasSubtasks)
-            Icon(
-              Icons.chevron_right,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: onEdit,
-          ),
-        ],
-      ),
+    Widget tileContent = _TaskTileContent(
+      task: task,
+      isSelected: isSelected,
+      onCheckboxChanged: onCheckboxChanged,
+      onEdit: onEdit,
       onTap: onTap,
+      onReorderDragStart: onReorderDragStart,
+      backgroundColor: isSelected ? Theme.of(context).colorScheme.surfaceContainer : null,
+      reorderIndex: reorderIndex,
     );
 
     if (isDesktop) {
@@ -316,6 +292,143 @@ class TaskTile extends StatelessWidget {
           fontSize: 10,
           fontWeight: FontWeight.bold,
           color: Theme.of(context).colorScheme.onPrimaryContainer,
+        ),
+      ),
+    );
+  }
+}
+
+class _TaskTileContent extends StatefulWidget {
+  final Task task;
+  final bool isSelected;
+  final Function(bool?)? onCheckboxChanged;
+  final VoidCallback? onEdit;
+  final VoidCallback? onTap;
+  final Function(Task)? onReorderDragStart;
+  final Color? backgroundColor;
+  final int? reorderIndex;
+
+  const _TaskTileContent({
+    required this.task,
+    required this.isSelected,
+    this.onCheckboxChanged,
+    this.onEdit,
+    this.onTap,
+    this.onReorderDragStart,
+    this.backgroundColor,
+    this.reorderIndex,
+  });
+
+  @override
+  State<_TaskTileContent> createState() => _TaskTileContentState();
+}
+
+class _TaskTileContentState extends State<_TaskTileContent> {
+  bool _isDragHandleHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: widget.backgroundColor,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: widget.onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Row(
+              children: [
+                MouseRegion(
+                  onEnter: (_) => setState(() => _isDragHandleHovered = true),
+                  onExit: (_) => setState(() => _isDragHandleHovered = false),
+                                    child: widget.reorderIndex != null 
+                      ? ReorderableDragStartListener(
+                          index: widget.reorderIndex!,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            padding: const EdgeInsets.all(4.0),
+                            decoration: BoxDecoration(
+                              color: _isDragHandleHovered
+                                  ? Theme.of(context).colorScheme.surfaceContainer
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(4.0),
+                            ),
+                            child: Icon(
+                              Icons.drag_handle,
+                              color: _isDragHandleHovered
+                                  ? Theme.of(context).colorScheme.onSurface
+                                  : Theme.of(context).colorScheme.outline,
+                              size: 20,
+                            ),
+                          ),
+                        )
+                      : AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          padding: const EdgeInsets.all(4.0),
+                          decoration: BoxDecoration(
+                            color: _isDragHandleHovered
+                                ? Theme.of(context).colorScheme.surfaceContainer
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(4.0),
+                          ),
+                          child: Icon(
+                            Icons.drag_handle,
+                            color: _isDragHandleHovered
+                                ? Theme.of(context).colorScheme.onSurface
+                                : Theme.of(context).colorScheme.outline,
+                            size: 20,
+                          ),
+                        ),
+                ),
+                const SizedBox(width: 8),
+                Checkbox(
+                  value: widget.task.isCompleted,
+                  onChanged: widget.onCheckboxChanged,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.task.title,
+                        style: TextStyle(
+                          decoration: widget.task.isCompleted
+                              ? TextDecoration.lineThrough
+                              : null,
+                          color: widget.task.isCompleted
+                              ? Theme.of(context).colorScheme.onSurfaceVariant
+                              : null,
+                        ),
+                      ),
+                      if (widget.task.hasSubtasks)
+                        Text(
+                          '${widget.task.subtaskCount} subtask${widget.task.subtaskCount == 1 ? '' : 's'}',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            fontSize: 12,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (widget.task.hasSubtasks)
+                      Icon(
+                        Icons.chevron_right,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    IconButton(
+                      icon: const Icon(Icons.edit),
+                      onPressed: widget.onEdit,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

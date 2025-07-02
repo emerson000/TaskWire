@@ -279,6 +279,11 @@ class _DesktopColumnViewState extends State<DesktopColumnView>
     }
   }
 
+  Future<void> _onReorderTasks(String? parentId, int oldIndex, int newIndex) async {
+    await widget.taskManager.reorderTasks(parentId, oldIndex, newIndex);
+    setState(() {});
+  }
+
   Future<List<Widget>> _buildColumns() async {
     List<Widget> columns = [];
 
@@ -391,6 +396,8 @@ class _DesktopColumnViewState extends State<DesktopColumnView>
                     isSelected: (task) => _columnHierarchy.contains(task),
                     targetColumnIndex: widget.addTaskColumnIndex,
                     columnIndex: columnIndex,
+                    onReorderTasks: (parentId, oldIndex, newIndex) => 
+                        _onReorderTasks(parentId, oldIndex, newIndex),
                   ),
                 );
               },

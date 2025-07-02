@@ -75,11 +75,14 @@ class TaskManager {
     if (oldIndex < 0 ||
         oldIndex >= tasks.length ||
         newIndex < 0 ||
-        newIndex >= tasks.length) {
+        newIndex >= tasks.length ||
+        oldIndex == newIndex) {
       return;
     }
 
     final task = tasks.removeAt(oldIndex);
     tasks.insert(newIndex, task);
+
+    await _repo.reorderTasks(tasks, parentId: parentId != null ? int.parse(parentId) : null);
   }
 }

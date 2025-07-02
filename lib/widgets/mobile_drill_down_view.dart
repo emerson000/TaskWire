@@ -292,6 +292,11 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView>
     }
   }
 
+  Future<void> _onReorderTasks(String? parentId, int oldIndex, int newIndex) async {
+    await widget.taskManager.reorderTasks(parentId, oldIndex, newIndex);
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     return DragTarget<Task>(
@@ -401,6 +406,8 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView>
             onHideAddTask: widget.onHideAddTask,
             onAddTask: widget.onAddTask,
             isDesktop: false,
+            onReorderTasks: (parentId, oldIndex, newIndex) => 
+                _onReorderTasks(parentId, oldIndex, newIndex),
           );
         },
       ),

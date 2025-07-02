@@ -13,6 +13,7 @@ class Tasks extends Table {
   TextColumn get title => text()();
   BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();
   IntColumn get parentId => integer().nullable().references(Tasks, #id)();
+  IntColumn get order => integer().withDefault(const Constant(0))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }
@@ -48,7 +49,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -61,6 +62,25 @@ class AppDatabase extends _$AppDatabase {
       if (from < 4) {
         LoggingService.info('Creating printers table...');
         await m.createTable(printers);
+      }
+      if (from < 5) {
+        LoggingService.info('Adding order column to tasks table...');
+        await customStatement('''
+          ALTER TABLE tasks ADD COLUMN "order" INTEGER NOT NULL DEFAULT 0
+        ''').catchError((e) {
+          LoggingService.info('Order column already exists or migration completed');
+          return null;
+        });
+        
+        // Set order values for existing tasks based on creation time
+        LoggingService.info('Setting order values for existing tasks...');
+        await customStatement('''
+          UPDATE tasks SET "order" = (
+            SELECT COUNT(*) FROM tasks t2 
+            WHERE t2.parent_id IS tasks.parent_id 
+            AND t2.created_at <= tasks.created_at
+          ) WHERE "order" = 0
+        ''');
       }
     },
     beforeOpen: (details) async {
@@ -81,11 +101,17 @@ class AppDatabase extends _$AppDatabase {
   );
 
   Future<List<Task>> getAllRootTasks() {
-    return (select(tasks)..where((t) => t.parentId.isNull())).get();
+    return (select(tasks)
+      ..where((t) => t.parentId.isNull())
+      ..orderBy([(t) => OrderingTerm.asc(t.order)])
+    ).get();
   }
 
   Future<List<Task>> getSubtasks(int parentId) {
-    return (select(tasks)..where((t) => t.parentId.equals(parentId))).get();
+    return (select(tasks)
+      ..where((t) => t.parentId.equals(parentId))
+      ..orderBy([(t) => OrderingTerm.asc(t.order)])
+    ).get();
   }
 
   Future<Task?> getTaskById(int taskId) {
@@ -121,6 +147,9 @@ class AppDatabase extends _$AppDatabase {
       parentId: task.parentId.present
           ? task.parentId
           : Value(existing.parentId),
+      order: task.order.present
+          ? task.order
+          : Value(existing.order),
       createdAt: task.createdAt.present
           ? task.createdAt
           : Value(existing.createdAt),
