@@ -650,6 +650,14 @@ class _AddTaskTileState extends State<AddTaskTile> {
     }
   }
 
+  void _handleDoneButton() {
+    if (_controller.text.trim().isEmpty) {
+      _cancel();
+    } else {
+      _submitTask();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return KeyboardListener(
@@ -672,7 +680,8 @@ class _AddTaskTileState extends State<AddTaskTile> {
                 enabled: !_isAdding,
                 textCapitalization: TextCapitalization.sentences,
                 maxLines: null,
-                textInputAction: TextInputAction.done,
+                textInputAction: isMobile ? TextInputAction.done : TextInputAction.newline,
+                onSubmitted: isMobile ? (_) => _handleDoneButton() : null,
                 decoration: InputDecoration(
                   isDense: true,
                   contentPadding: const EdgeInsets.symmetric(vertical: 8.0),
