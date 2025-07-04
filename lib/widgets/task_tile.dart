@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import '../models/task.dart';
+import '../utils/platform_utils.dart';
 
 class TaskTile extends StatelessWidget {
   final Task task;
@@ -51,8 +52,6 @@ class TaskTile extends StatelessWidget {
   }
 
   Widget _buildDraggableWidget(BuildContext context) {
-    final isWindows = defaultTargetPlatform == TargetPlatform.windows;
-
     if (isWindows) {
       return Draggable<Task>(
         data: task,
@@ -137,10 +136,6 @@ class TaskTile extends StatelessWidget {
   }
 
   Widget _buildNormalTile(BuildContext context) {
-    final isDesktop =
-        defaultTargetPlatform == TargetPlatform.windows ||
-        defaultTargetPlatform == TargetPlatform.macOS ||
-        defaultTargetPlatform == TargetPlatform.linux;
 
     Widget tileContent = _TaskTileContent(
       task: task,
@@ -352,7 +347,7 @@ class _TaskTileContentState extends State<_TaskTileContent> {
                             ),
                             child: AnimatedOpacity(
                               duration: const Duration(milliseconds: 150),
-                              opacity: _isTileHovered ? 1.0 : 0.0,
+                              opacity: _isTileHovered || isMobile ? 1.0 : 0.0,
                               child: Icon(
                                 Icons.drag_indicator,
                                 color: Theme.of(context).colorScheme.onSurface,
@@ -365,14 +360,14 @@ class _TaskTileContentState extends State<_TaskTileContent> {
                           duration: const Duration(milliseconds: 150),
                           padding: const EdgeInsets.all(4.0),
                           decoration: BoxDecoration(
-                            color: _isTileHovered
+                            color: _isTileHovered || isMobile
                                 ? Theme.of(context).colorScheme.surfaceContainer
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(4.0),
                           ),
                           child: AnimatedOpacity(
                             duration: const Duration(milliseconds: 150),
-                            opacity: _isTileHovered ? 1.0 : 0.0,
+                            opacity: _isTileHovered || isMobile ? 1.0 : 0.0,
                             child: Icon(
                               Icons.drag_indicator,
                               color: Theme.of(context).colorScheme.onSurface,
