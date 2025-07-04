@@ -185,7 +185,7 @@ class _ListPageState extends State<ListPage> {
 
     return Scaffold(
       body: isDesktop ? _buildDesktopView() : _buildMobileView(),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: _showAddTask ? null : FloatingActionButton(
         onPressed: () {
           _showAddTaskInline(
             _currentParent?.id.toString(),
