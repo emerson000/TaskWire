@@ -329,7 +329,7 @@ class _TaskTileContentState extends State<_TaskTileContent> {
             onTap: widget.onTap,
             child: Padding(
               padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
+                horizontal: 4.0,
                 vertical: 8.0,
               ),
               child: Row(
@@ -352,7 +352,7 @@ class _TaskTileContentState extends State<_TaskTileContent> {
                               duration: const Duration(milliseconds: 150),
                               opacity: _isTileHovered ? 1.0 : 0.0,
                               child: Icon(
-                                Icons.drag_handle,
+                                Icons.drag_indicator,
                                 color: Theme.of(context).colorScheme.onSurface,
                                 size: 20,
                               ),
@@ -372,7 +372,7 @@ class _TaskTileContentState extends State<_TaskTileContent> {
                             duration: const Duration(milliseconds: 150),
                             opacity: _isTileHovered ? 1.0 : 0.0,
                             child: Icon(
-                              Icons.drag_handle,
+                              Icons.drag_indicator,
                               color: Theme.of(context).colorScheme.onSurface,
                               size: 20,
                             ),

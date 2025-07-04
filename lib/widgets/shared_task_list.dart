@@ -75,6 +75,7 @@ class SharedTaskList extends StatelessWidget {
       children: [
         Expanded(
           child: ReorderableListView.builder(
+            buildDefaultDragHandles: false,
             itemCount: tasks.length,
             onReorder: (oldIndex, newIndex) {
               if (onReorderTasks != null) {
