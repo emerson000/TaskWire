@@ -3,7 +3,7 @@ import '../models/task.dart';
 import 'task_tile.dart';
 import 'zero_state.dart';
 
-class SharedTaskList extends StatelessWidget {
+class SharedTaskList extends StatefulWidget {
   final List<Task> tasks;
   final Task? parent;
   final int? editingTaskId;
@@ -25,6 +25,8 @@ class SharedTaskList extends StatelessWidget {
   final bool Function(Task)? isSelected;
   final int? targetColumnIndex;
   final int? columnIndex;
+  final Function(String?, int, int)? onReorderTasks;
+  final Function(List<Task>)? onOptimisticReorder;
 
   const SharedTaskList({
     super.key,
@@ -49,65 +51,121 @@ class SharedTaskList extends StatelessWidget {
     this.isSelected,
     this.targetColumnIndex,
     this.columnIndex,
+    this.onReorderTasks,
+    this.onOptimisticReorder,
   });
 
   @override
-  Widget build(BuildContext context) {
-    final shouldShowAddTask = isDesktop 
-        ? showAddTask && targetColumnIndex == columnIndex
-        : showAddTask && addTaskParentId == parent?.id.toString();
+  State<SharedTaskList> createState() => _SharedTaskListState();
+}
 
-    if (tasks.isEmpty && !shouldShowAddTask) {
+class _SharedTaskListState extends State<SharedTaskList> {
+  List<Task> _displayTasks = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _displayTasks = List.from(widget.tasks);
+  }
+
+  @override
+  void didUpdateWidget(SharedTaskList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.tasks != oldWidget.tasks) {
+      setState(() {
+        _displayTasks = List.from(widget.tasks);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final shouldShowAddTask = widget.isDesktop 
+        ? widget.showAddTask && widget.targetColumnIndex == widget.columnIndex
+        : widget.showAddTask && widget.addTaskParentId == widget.parent?.id.toString();
+
+    if (_displayTasks.isEmpty && !shouldShowAddTask) {
       return ZeroState(
-        parentTitle: parent?.title,
-        onAddTask: () => onAddTask(
-          parent?.id.toString(),
-          parent?.title,
-          columnIndex: isDesktop ? columnIndex : null,
+        parentTitle: widget.parent?.title,
+        onAddTask: () => widget.onAddTask(
+          widget.parent?.id.toString(),
+          widget.parent?.title,
+          columnIndex: widget.isDesktop ? widget.columnIndex : null,
         ),
-        isDesktop: isDesktop,
+        isDesktop: widget.isDesktop,
       );
     }
 
-    return ListView.builder(
-      itemCount: tasks.length + (shouldShowAddTask ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (shouldShowAddTask && index == tasks.length) {
-          return AddTaskTile(
-            parentId: parent?.id.toString(),
-            parentTitle: parent?.title,
-            onAddTask: onCreateTask,
-            onAddMultipleTasks: onAddMultipleTasks,
-            onCancel: onHideAddTask,
-          );
-        }
+    final totalItemCount = _displayTasks.length + (shouldShowAddTask ? 1 : 0);
 
-        final task = tasks[index];
-        return DragTarget<Task>(
-          onWillAcceptWithDetails: (details) => details.data.id != task.id,
-          onAcceptWithDetails: (details) => onTaskDrop(details.data, task),
-          builder: (context, candidateData, rejectedData) {
-            return TaskTile(
-              key: ValueKey(task.id),
-              task: task,
-              isEditing: editingTaskId == task.id,
-              isSelected: isSelected?.call(task) ?? false,
-              editController: editController,
-              onTap: () => onTaskTap(task),
-              onEdit: () => onStartEditing(task),
-              onDelete: () => onDeleteTask(task.id),
-              onCheckboxChanged: (_) => onUpdateTask(
-                task.id,
-                isCompleted: !task.isCompleted,
-              ),
-              onEditComplete: onFinishEditing,
-              onEditCancel: onEditCancel,
-              isDragTarget: candidateData.isNotEmpty,
-              onDragAccept: (draggedTask) => onTaskDrop(draggedTask, task),
+    return SizedBox.expand(
+      child: ReorderableListView.builder(
+        key: ValueKey('task-list-${widget.tasks.length}-$shouldShowAddTask'),
+        buildDefaultDragHandles: false,
+        itemCount: totalItemCount,
+        onReorder: (oldIndex, newIndex) {
+          if (widget.onReorderTasks != null) {
+            if (newIndex > oldIndex) {
+              newIndex -= 1;
+            }
+            
+            setState(() {
+              final task = _displayTasks.removeAt(oldIndex);
+              _displayTasks.insert(newIndex, task);
+            });
+            
+            if (widget.onOptimisticReorder != null) {
+              widget.onOptimisticReorder!(_displayTasks);
+            }
+            
+            widget.onReorderTasks!(widget.parent?.id.toString(), oldIndex, newIndex);
+          }
+        },
+        itemBuilder: (context, index) {
+          if (shouldShowAddTask && index == _displayTasks.length) {
+            return AddTaskTile(
+              key: const ValueKey('add-task-tile'),
+              parentId: widget.parent?.id.toString(),
+              parentTitle: widget.parent?.title,
+              onAddTask: widget.onCreateTask,
+              onAddMultipleTasks: widget.onAddMultipleTasks,
+              onCancel: widget.onHideAddTask,
             );
-          },
-        );
-      },
+          }
+          
+          if (index >= _displayTasks.length) {
+            return const SizedBox.shrink();
+          }
+          
+          final task = _displayTasks[index];
+          return DragTarget<Task>(
+            key: ValueKey(task.id),
+            onWillAcceptWithDetails: (details) => details.data.id != task.id,
+            onAcceptWithDetails: (details) => widget.onTaskDrop(details.data, task),
+            builder: (context, candidateData, rejectedData) {
+              return TaskTile(
+                key: ValueKey(task.id),
+                task: task,
+                isEditing: widget.editingTaskId == task.id,
+                isSelected: widget.isSelected?.call(task) ?? false,
+                editController: widget.editController,
+                onTap: () => widget.onTaskTap(task),
+                onEdit: () => widget.onStartEditing(task),
+                onDelete: () => widget.onDeleteTask(task.id),
+                onCheckboxChanged: (_) => widget.onUpdateTask(
+                  task.id,
+                  isCompleted: !task.isCompleted,
+                ),
+                onEditComplete: widget.onFinishEditing,
+                onEditCancel: widget.onEditCancel,
+                isDragTarget: candidateData.isNotEmpty,
+                onDragAccept: (draggedTask) => widget.onTaskDrop(draggedTask, task),
+                reorderIndex: index,
+              );
+            },
+          );
+        },
+      ),
     );
   }
 } 

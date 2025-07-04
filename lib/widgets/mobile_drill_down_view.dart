@@ -63,6 +63,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView>
   final PageController _pageController = PageController(initialPage: 0);
   int _currentPageIndex = 0;
   bool _isNavigatingProgrammatically = false;
+  final Map<String, List<Task>> _optimisticTasks = {};
 
   @override
   TaskManager get taskManager => widget.taskManager;
@@ -241,6 +242,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView>
       return;
     }
     
+    _optimisticTasks.clear();
     await handleTaskDrop(
       draggedTask: draggedTask,
       targetTask: targetTask,
@@ -254,6 +256,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView>
       return;
     }
     
+    _optimisticTasks.clear();
     await handleParentDrop(
       draggedTask: draggedTask,
       targetParent: targetParent,
@@ -290,6 +293,21 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView>
         ),
       );
     }
+  }
+
+  Future<void> _onReorderTasks(String? parentId, int oldIndex, int newIndex) async {
+    await widget.taskManager.reorderTasks(parentId, oldIndex, newIndex);
+    _optimisticTasks.remove(parentId);
+    setState(() {});
+  }
+
+  void _onOptimisticReorder(String? parentId, List<Task> reorderedTasks) {
+    if (parentId != null) {
+      _optimisticTasks[parentId] = reorderedTasks;
+    } else {
+      _optimisticTasks['null'] = reorderedTasks;
+    }
+    setState(() {});
   }
 
   @override
@@ -366,6 +384,9 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView>
   }
 
   Widget _buildPageContent(Task? parent, int pageIndex) {
+    final parentId = parent?.id.toString();
+    final optimisticTasks = _optimisticTasks[parentId ?? 'null'];
+    
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(
@@ -373,7 +394,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView>
         ).colorScheme.primaryContainer.withValues(alpha: 0.1),
       ),
       child: FutureBuilder<List<Task>>(
-        future: widget.taskManager.getTasksAtLevel(parent?.id.toString()),
+        future: widget.taskManager.getTasksAtLevel(parentId),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
@@ -381,7 +402,7 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView>
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
-          final tasks = snapshot.data!;
+          final tasks = optimisticTasks ?? snapshot.data!;
           return SharedTaskList(
             tasks: tasks,
             parent: parent,
@@ -401,6 +422,10 @@ class _MobileDrillDownViewState extends State<MobileDrillDownView>
             onHideAddTask: widget.onHideAddTask,
             onAddTask: widget.onAddTask,
             isDesktop: false,
+            onReorderTasks: (parentId, oldIndex, newIndex) => 
+                _onReorderTasks(parentId, oldIndex, newIndex),
+            onOptimisticReorder: (reorderedTasks) => 
+                _onOptimisticReorder(parentId, reorderedTasks),
           );
         },
       ),

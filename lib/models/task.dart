@@ -3,6 +3,7 @@ class Task {
   String title;
   bool isCompleted;
   int? parentId;
+  int order;
   List<Task> subtasks;
   DateTime createdAt;
   DateTime updatedAt;
@@ -12,6 +13,7 @@ class Task {
     required this.title,
     this.isCompleted = false,
     this.parentId,
+    this.order = 0,
     List<Task>? subtasks,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -60,6 +62,7 @@ class Task {
     String? title,
     bool? isCompleted,
     int? parentId,
+    int? order,
     List<Task>? subtasks,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -69,6 +72,7 @@ class Task {
       title: title ?? this.title,
       isCompleted: isCompleted ?? this.isCompleted,
       parentId: parentId ?? this.parentId,
+      order: order ?? this.order,
       subtasks: subtasks ?? List.from(this.subtasks),
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -86,6 +90,6 @@ class Task {
 
   @override
   String toString() {
-    return 'Task(id: $id, title: $title, isCompleted: $isCompleted, parentId: $parentId, subtasks: ${subtasks.length})';
+    return 'Task(id: $id, title: $title, isCompleted: $isCompleted, parentId: $parentId, order: $order, subtasks: ${subtasks.length})';
   }
 }
