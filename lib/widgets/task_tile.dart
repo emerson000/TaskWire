@@ -699,7 +699,7 @@ class _AddTaskTileState extends State<AddTaskTile> {
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
             else ...[
-              IconButton(icon: const Icon(Icons.check), onPressed: _submitTask),
+              IconButton(icon: const Icon(Icons.check), onPressed: _handleDoneButton),
               IconButton(icon: const Icon(Icons.close), onPressed: _cancel),
             ],
           ],
