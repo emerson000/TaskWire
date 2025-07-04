@@ -456,12 +456,32 @@ class _AddTaskTileState extends State<AddTaskTile> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   bool _isAdding = false;
+  bool _hasRequestedFocus = false;
 
   @override
   void initState() {
     super.initState();
+    _requestFocus();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_hasRequestedFocus) {
+      _requestFocus();
+    }
+  }
+
+  void _requestFocus() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _focusNode.requestFocus();
+      if (mounted && !_hasRequestedFocus) {
+        Future.delayed(const Duration(milliseconds: 50), () {
+          if (mounted && !_hasRequestedFocus) {
+            _focusNode.requestFocus();
+            _hasRequestedFocus = true;
+          }
+        });
+      }
     });
   }
 
@@ -518,7 +538,8 @@ class _AddTaskTileState extends State<AddTaskTile> {
     try {
       await widget.onAddTask(taskTitle, widget.parentId);
       _controller.clear();
-      _focusNode.requestFocus();
+      _hasRequestedFocus = false;
+      _requestFocus();
     } finally {
       setState(() {
         _isAdding = false;
@@ -589,7 +610,8 @@ class _AddTaskTileState extends State<AddTaskTile> {
           }
         }
         _controller.clear();
-        _focusNode.requestFocus();
+        _hasRequestedFocus = false;
+        _requestFocus();
       } finally {
         setState(() {
           _isAdding = false;
@@ -600,6 +622,7 @@ class _AddTaskTileState extends State<AddTaskTile> {
 
   void _cancel() {
     _controller.clear();
+    _hasRequestedFocus = false;
     widget.onCancel?.call();
   }
 
