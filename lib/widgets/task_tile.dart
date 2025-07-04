@@ -19,6 +19,7 @@ class TaskTile extends StatelessWidget {
   final Function(Task)? onReorderDragStart;
   final Function(Task, Task)? onReorderDragAccept;
   final int? reorderIndex;
+  final bool disableDrag;
 
   const TaskTile({
     super.key,
@@ -37,6 +38,7 @@ class TaskTile extends StatelessWidget {
     this.onReorderDragStart,
     this.onReorderDragAccept,
     this.reorderIndex,
+    this.disableDrag = false,
   });
 
   @override

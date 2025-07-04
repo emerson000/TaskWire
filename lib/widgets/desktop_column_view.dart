@@ -59,13 +59,14 @@ class DesktopColumnView extends StatefulWidget {
 class _DesktopColumnViewState extends State<DesktopColumnView> 
     with TaskViewMixin {
   List<Task?> _columnHierarchy = [null];
-  final ScrollController _scrollController = ScrollController();
   final Map<int, double> _columnWidths = <int, double>{};
-  static const double _defaultColumnWidth = 350.0;
+  final Map<int, bool> _resizeHandleHovered = <int, bool>{};
+  final ScrollController _scrollController = ScrollController();
+  final double _defaultColumnWidth = 300.0;
   static const double _minColumnWidth = 200.0;
   static const double _maxColumnWidth = 600.0;
-  final Map<int, bool> _resizeHandleHovered = <int, bool>{};
   final Map<int, bool> _resizeHandleDragging = <int, bool>{};
+  final Map<String, List<Task>> _optimisticTasks = {};
 
   @override
   TaskManager get taskManager => widget.taskManager;
@@ -228,6 +229,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView>
       return;
     }
     
+    _optimisticTasks.clear();
     await handleTaskDrop(
       draggedTask: draggedTask,
       targetTask: targetTask,
@@ -241,6 +243,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView>
       return;
     }
     
+    _optimisticTasks.clear();
     await handleParentDrop(
       draggedTask: draggedTask,
       targetParent: targetParent,
@@ -281,6 +284,16 @@ class _DesktopColumnViewState extends State<DesktopColumnView>
 
   Future<void> _onReorderTasks(String? parentId, int oldIndex, int newIndex) async {
     await widget.taskManager.reorderTasks(parentId, oldIndex, newIndex);
+    _optimisticTasks.remove(parentId);
+    setState(() {});
+  }
+
+  void _onOptimisticReorder(String? parentId, List<Task> reorderedTasks) {
+    if (parentId != null) {
+      _optimisticTasks[parentId] = reorderedTasks;
+    } else {
+      _optimisticTasks['null'] = reorderedTasks;
+    }
     setState(() {});
   }
 
@@ -352,6 +365,10 @@ class _DesktopColumnViewState extends State<DesktopColumnView>
     required int columnIndex,
     required bool isLastColumn,
   }) {
+    final parentId = parent?.id.toString();
+    final optimisticTasks = _optimisticTasks[parentId ?? 'null'];
+    final displayTasks = optimisticTasks ?? tasks;
+    
     return SizedBox(
       width: _columnWidths[columnIndex] ?? _defaultColumnWidth,
       height: double.infinity,
@@ -373,7 +390,7 @@ class _DesktopColumnViewState extends State<DesktopColumnView>
                         : null,
                   ),
                   child: SharedTaskList(
-                    tasks: tasks,
+                    tasks: displayTasks,
                     parent: parent,
                     editingTaskId: widget.editingTaskId,
                     editController: widget.editController,
@@ -398,6 +415,8 @@ class _DesktopColumnViewState extends State<DesktopColumnView>
                     columnIndex: columnIndex,
                     onReorderTasks: (parentId, oldIndex, newIndex) => 
                         _onReorderTasks(parentId, oldIndex, newIndex),
+                    onOptimisticReorder: (reorderedTasks) => 
+                        _onOptimisticReorder(parentId, reorderedTasks),
                   ),
                 );
               },
