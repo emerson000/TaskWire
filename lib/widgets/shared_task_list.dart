@@ -72,7 +72,9 @@ class _SharedTaskListState extends State<SharedTaskList> {
   void didUpdateWidget(SharedTaskList oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.tasks != oldWidget.tasks) {
-      _displayTasks = List.from(widget.tasks);
+      setState(() {
+        _displayTasks = List.from(widget.tasks);
+      });
     }
   }
 
@@ -94,10 +96,13 @@ class _SharedTaskListState extends State<SharedTaskList> {
       );
     }
 
+    final totalItemCount = _displayTasks.length + (shouldShowAddTask ? 1 : 0);
+
     return SizedBox.expand(
       child: ReorderableListView.builder(
+        key: ValueKey('task-list-${widget.tasks.length}-$shouldShowAddTask'),
         buildDefaultDragHandles: false,
-        itemCount: _displayTasks.length + (shouldShowAddTask ? 1 : 0),
+        itemCount: totalItemCount,
         onReorder: (oldIndex, newIndex) {
           if (widget.onReorderTasks != null) {
             if (newIndex > oldIndex) {
@@ -126,6 +131,10 @@ class _SharedTaskListState extends State<SharedTaskList> {
               onAddMultipleTasks: widget.onAddMultipleTasks,
               onCancel: widget.onHideAddTask,
             );
+          }
+          
+          if (index >= _displayTasks.length) {
+            return const SizedBox.shrink();
           }
           
           final task = _displayTasks[index];
