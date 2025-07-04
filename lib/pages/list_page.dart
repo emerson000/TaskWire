@@ -74,7 +74,10 @@ class _ListPageState extends State<ListPage> {
     }
   }
 
-  Future<void> _addMultipleTasks(List<String> taskTitles, String? parentId) async {
+  Future<void> _addMultipleTasks(
+    List<String> taskTitles,
+    String? parentId,
+  ) async {
     try {
       for (final taskTitle in taskTitles) {
         if (taskTitle.trim().isNotEmpty) {
@@ -94,7 +97,11 @@ class _ListPageState extends State<ListPage> {
     }
   }
 
-  void _showAddTaskInline(String? parentId, String? parentTitle, {int? columnIndex}) {
+  void _showAddTaskInline(
+    String? parentId,
+    String? parentTitle, {
+    int? columnIndex,
+  }) {
     setState(() {
       _showAddTask = true;
       _addTaskParentId = parentId;
@@ -125,30 +132,10 @@ class _ListPageState extends State<ListPage> {
 
     if (!mounted) return;
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Task'),
-        content: Text('Are you sure you want to delete "${task.title}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true) {
-      await _taskManager.deleteTask(taskId);
-      setState(() {
-        _refreshCounter++;
-      });
-    }
+    await _taskManager.deleteTask(taskId);
+    setState(() {
+      _refreshCounter++;
+    });
   }
 
   void _startEditing(Task task) {
@@ -200,7 +187,11 @@ class _ListPageState extends State<ListPage> {
       body: isDesktop ? _buildDesktopView() : _buildMobileView(),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          _showAddTaskInline(_currentParent?.id.toString(), _currentParent?.title, columnIndex: _currentColumnIndex);
+          _showAddTaskInline(
+            _currentParent?.id.toString(),
+            _currentParent?.title,
+            columnIndex: _currentColumnIndex,
+          );
         },
         tooltip: 'Add Task',
         child: const Icon(Icons.add),
