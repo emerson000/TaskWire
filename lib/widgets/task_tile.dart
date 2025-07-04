@@ -180,7 +180,7 @@ class TaskTile extends StatelessWidget {
         ),
         confirmDismiss: (direction) async {
           onDelete?.call();
-          return false;
+          return true;
         },
         child: tileContent,
       );
