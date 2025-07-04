@@ -19,14 +19,19 @@ class BreadcrumbNavigation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: isDragging 
+            ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.1)
+            : Theme.of(context).colorScheme.surface,
         border: Border(
           bottom: BorderSide(
-            color: Theme.of(context).dividerColor,
-            width: 0.5,
+            color: isDragging 
+                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)
+                : Theme.of(context).dividerColor,
+            width: isDragging ? 2.0 : 0.5,
           ),
         ),
       ),
@@ -81,22 +86,54 @@ class BreadcrumbNavigation extends StatelessWidget {
           onWillAcceptWithDetails: (details) => true,
           onAcceptWithDetails: (details) => onTaskDrop!(details.data, task),
           builder: (context, candidateData, rejectedData) {
+            final isDragTarget = candidateData.isNotEmpty;
             return AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.all(2.0),
+              padding: const EdgeInsets.all(4.0),
               decoration: BoxDecoration(
-                color: candidateData.isNotEmpty
-                    ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3)
-                    : null,
-                borderRadius: BorderRadius.circular(6.0),
-                border: candidateData.isNotEmpty
+                color: isDragTarget
+                    ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.6)
+                    : isDragging
+                        ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.2)
+                        : null,
+                borderRadius: BorderRadius.circular(8.0),
+                border: isDragTarget
                     ? Border.all(
                         color: Theme.of(context).colorScheme.primary,
-                        width: 1.0,
+                        width: 2.0,
                       )
+                    : isDragging
+                        ? Border.all(
+                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                            width: 1.0,
+                            style: BorderStyle.solid,
+                          )
+                        : null,
+                boxShadow: isDragTarget
+                    ? [
+                        BoxShadow(
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                          blurRadius: 8.0,
+                          spreadRadius: 2.0,
+                        ),
+                      ]
                     : null,
               ),
-              child: breadcrumbContent,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  breadcrumbContent,
+                  if (isDragTarget)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4.0),
+                      child: Icon(
+                        Icons.add,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 16,
+                      ),
+                    ),
+                ],
+              ),
             );
           },
         );

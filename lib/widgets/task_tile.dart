@@ -70,35 +70,48 @@ class TaskTile extends StatelessWidget {
 
   Widget _buildDragFeedback(BuildContext context) {
     return Material(
-      elevation: 4.0,
+      elevation: 8.0,
+      borderRadius: BorderRadius.circular(8.0),
       child: Container(
-        width: MediaQuery.of(context).size.width * 0.8,
-        padding: const EdgeInsets.all(16.0),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.6,
+          minWidth: 200.0,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(8.0),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+            width: 1.0,
+          ),
         ),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               task.isCompleted
                   ? Icons.check_box
                   : Icons.check_box_outline_blank,
               color: Theme.of(context).colorScheme.primary,
+              size: 20,
             ),
-            const SizedBox(width: 16),
-            Expanded(
+            const SizedBox(width: 8),
+            Flexible(
               child: Text(
                 task.title,
                 style: TextStyle(
                   decoration: task.isCompleted
                       ? TextDecoration.lineThrough
                       : null,
+                  fontSize: 14,
                 ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
               ),
             ),
             if (task.hasSubtasks) ...[
-              const SizedBox(width: 8),
+              const SizedBox(width: 4),
               _buildSubtaskIndicator(context),
             ],
           ],
