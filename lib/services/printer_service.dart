@@ -409,13 +409,19 @@ class PrinterService {
       bytes += generator.text('');
     }
 
-    final title = columnTitle ?? 'TaskWire Column';
-    bytes += _wrapTextForSize2(
-      generator,
-      title,
-      align: PosAlign.center,
-      bold: true,
-    );
+    if (_isQrCodeTitle(columnTitle)) {
+      final qrContent = _getQrCodeContentFromTitle(columnTitle!);
+      bytes += generator.qrcode(qrContent);
+      bytes += generator.text('');
+    } else {
+      final title = columnTitle ?? 'TaskWire Column';
+      bytes += _wrapTextForSize2(
+        generator,
+        title,
+        align: PosAlign.center,
+        bold: true,
+      );
+    }
 
     bytes += generator.text(
       'Date: ${DateTime.now().toString().split('.')[0]}',
@@ -439,14 +445,18 @@ class PrinterService {
       for (int i = 0; i < tasks.length; i++) {
         final task = tasks[i];
 
-        bytes += generator.text(
-          '[${task.isCompleted ? 'X' : ' '}] ${task.title}',
-          styles: PosStyles(
-            height: PosTextSize.size1,
-            width: PosTextSize.size1,
-            bold: task.isCompleted,
-          ),
-        );
+        if (_isQrCodeTask(task)) {
+          bytes += _addQrCodeToReceipt(generator, task);
+        } else {
+          bytes += generator.text(
+            '[${task.isCompleted ? 'X' : ' '}] ${task.title}',
+            styles: PosStyles(
+              height: PosTextSize.size1,
+              width: PosTextSize.size1,
+              bold: task.isCompleted,
+            ),
+          );
+        }
 
         if (task.subtaskCount > 0) {
           bytes += generator.text(
@@ -479,14 +489,19 @@ class PrinterService {
     List<int> bytes = [];
     for (final subtask in subtasks) {
       final indent = '  ' * level;
-      bytes += generator.text(
-        '$indent[${subtask.isCompleted ? 'X' : ' '}] ${subtask.title}',
-        styles: PosStyles(
-          height: PosTextSize.size1,
-          width: PosTextSize.size1,
-          bold: subtask.isCompleted,
-        ),
-      );
+      
+      if (_isQrCodeTask(subtask)) {
+        bytes += _addQrCodeToReceipt(generator, subtask, indent);
+      } else {
+        bytes += generator.text(
+          '$indent[${subtask.isCompleted ? 'X' : ' '}] ${subtask.title}',
+          styles: PosStyles(
+            height: PosTextSize.size1,
+            width: PosTextSize.size1,
+            bold: subtask.isCompleted,
+          ),
+        );
+      }
 
       if (subtask.subtaskCount > 0) {
         bytes += await _addSubtasksToReceipt(
@@ -522,13 +537,19 @@ class PrinterService {
       bytes += generator.text('');
     }
 
-    final title = columnTitle ?? 'TaskWire Column';
-    bytes += _wrapTextForSize2(
-      generator,
-      title,
-      align: PosAlign.center,
-      bold: true,
-    );
+    if (_isQrCodeTitle(columnTitle)) {
+      final qrContent = _getQrCodeContentFromTitle(columnTitle!);
+      bytes += generator.qrcode(qrContent);
+      bytes += generator.text('');
+    } else {
+      final title = columnTitle ?? 'TaskWire Column';
+      bytes += _wrapTextForSize2(
+        generator,
+        title,
+        align: PosAlign.center,
+        bold: true,
+      );
+    }
 
     bytes += generator.text(
       'Date: ${DateTime.now().toString().split('.')[0]}',
@@ -552,14 +573,18 @@ class PrinterService {
       for (int i = 0; i < tasks.length; i++) {
         final task = tasks[i];
 
-        bytes += generator.text(
-          '[${task.isCompleted ? 'X' : ' '}] ${task.title}',
-          styles: PosStyles(
-            height: PosTextSize.size1,
-            width: PosTextSize.size1,
-            bold: task.isCompleted,
-          ),
-        );
+        if (_isQrCodeTask(task)) {
+          bytes += _addQrCodeToReceipt(generator, task);
+        } else {
+          bytes += generator.text(
+            '[${task.isCompleted ? 'X' : ' '}] ${task.title}',
+            styles: PosStyles(
+              height: PosTextSize.size1,
+              width: PosTextSize.size1,
+              bold: task.isCompleted,
+            ),
+          );
+        }
 
         if (task.subtaskCount > 0) {
           bytes += generator.text(
@@ -836,12 +861,16 @@ class PrinterService {
       bytes += generator.text('');
     }
 
-    bytes += _wrapTextForSize2(
-      generator,
-      task.title,
-      align: PosAlign.center,
-      bold: true,
-    );
+    if (_isQrCodeTask(task)) {
+      bytes += _addQrCodeToReceipt(generator, task);
+    } else {
+      bytes += _wrapTextForSize2(
+        generator,
+        task.title,
+        align: PosAlign.center,
+        bold: true,
+      );
+    }
 
     bytes += generator.text('');
 
@@ -891,12 +920,16 @@ class PrinterService {
       bytes += generator.text('');
     }
 
-    bytes += _wrapTextForSize2(
-      generator,
-      task.title,
-      align: PosAlign.left,
-      bold: true,
-    );
+    if (_isQrCodeTask(task)) {
+      bytes += _addQrCodeToReceipt(generator, task);
+    } else {
+      bytes += _wrapTextForSize2(
+        generator,
+        task.title,
+        align: PosAlign.left,
+        bold: true,
+      );
+    }
 
     bytes += generator.text('');
 
@@ -935,10 +968,15 @@ class PrinterService {
     List<int> bytes = [];
     for (final subtask in subtasks) {
       final indent = '  ' * level;
-      bytes += generator.text(
-        '$indent[${subtask.isCompleted ? 'X' : ' '}] ${subtask.title}',
-        styles: PosStyles(height: PosTextSize.size1, width: PosTextSize.size1),
-      );
+      
+      if (_isQrCodeTask(subtask)) {
+        bytes += _addQrCodeToReceipt(generator, subtask, indent);
+      } else {
+        bytes += generator.text(
+          '$indent[${subtask.isCompleted ? 'X' : ' '}] ${subtask.title}',
+          styles: PosStyles(height: PosTextSize.size1, width: PosTextSize.size1),
+        );
+      }
 
       if (subtask.subtaskCount > 0) {
         bytes += await _addSubtasksToIndividualSlip(
@@ -948,6 +986,46 @@ class PrinterService {
         );
       }
     }
+    return bytes;
+  }
+
+  bool _isQrCodeTask(Task task) {
+    return task.title.startsWith('QR:');
+  }
+
+  String _getQrCodeContent(Task task) {
+    if (!_isQrCodeTask(task)) return '';
+    return task.title.substring(3).trim();
+  }
+
+  bool _isQrCodeTitle(String? title) {
+    return title?.startsWith('QR:') ?? false;
+  }
+
+  String _getQrCodeContentFromTitle(String title) {
+    if (!_isQrCodeTitle(title)) return '';
+    return title.substring(3).trim();
+  }
+
+  List<int> _addQrCodeToReceipt(Generator generator, Task task, [String? indent]) {
+    List<int> bytes = [];
+    final qrContent = _getQrCodeContent(task);
+    
+    if (qrContent.isEmpty) {
+      bytes += generator.text(
+        '${indent ?? ''}[${task.isCompleted ? 'X' : ' '}] ${task.title}',
+        styles: PosStyles(
+          height: PosTextSize.size1,
+          width: PosTextSize.size1,
+          bold: task.isCompleted,
+        ),
+      );
+      return bytes;
+    }
+
+    bytes += generator.qrcode(qrContent);
+    bytes += generator.text('');
+
     return bytes;
   }
 
