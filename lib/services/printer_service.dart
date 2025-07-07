@@ -13,7 +13,7 @@ import 'package:flutter_usb_printer/flutter_usb_printer.dart';
 
 enum PrintErrorType { noPrinters, cancelled, printFailed, exception }
 
-enum BarcodeType { qr, code39, code128 }
+enum BarcodeType { qr, code39, code128, upcA }
 
 class PrintResult {
   final bool success;
@@ -1006,6 +1006,8 @@ class PrinterService {
       return BarcodeType.code39;
     } else if (upperContent.startsWith('CODE128:') || upperContent.startsWith('C128:')) {
       return BarcodeType.code128;
+    } else if (upperContent.startsWith('UPCA:') || upperContent.startsWith('UPC:')) {
+      return BarcodeType.upcA;
     }
     return null;
   }
@@ -1031,6 +1033,13 @@ class PrinterService {
           return content.substring(8).trim();
         } else if (upperContent.startsWith('C128:')) {
           return content.substring(5).trim();
+        }
+        break;
+      case BarcodeType.upcA:
+        if (upperContent.startsWith('UPCA:')) {
+          return content.substring(5).trim();
+        } else if (upperContent.startsWith('UPC:')) {
+          return content.substring(4).trim();
         }
         break;
     }
@@ -1062,6 +1071,19 @@ class PrinterService {
     }
     
     return processedContent.split('');
+  }
+
+  List<int> _convertToUpcAData(String content) {
+    List<int> result = [];
+    for (int i = 0; i < content.length; i++) {
+      final char = content[i];
+      final codeUnit = char.codeUnitAt(0);
+      
+      if (codeUnit >= 48 && codeUnit <= 57) {
+        result.add(int.parse(char));
+      }
+    }
+    return result;
   }
 
   List<int> _addBarcodeToReceipt(Generator generator, String content, Task? task, [String? indent]) {
@@ -1118,6 +1140,21 @@ class PrinterService {
           LoggingService.error('Error generating Code 128 barcode: $e');
           bytes += generator.text(
             '${indent ?? ''}Code 128 Error: $barcodeContent',
+            styles: PosStyles(
+              height: PosTextSize.size1,
+              width: PosTextSize.size1,
+            ),
+          );
+        }
+        break;
+      case BarcodeType.upcA:
+        try {
+          final barData = _convertToUpcAData(barcodeContent);
+          bytes += generator.barcode(Barcode.upcA(barData));
+        } catch (e) {
+          LoggingService.error('Error generating UPC-A barcode: $e');
+          bytes += generator.text(
+            '${indent ?? ''}UPC-A Error: $barcodeContent',
             styles: PosStyles(
               height: PosTextSize.size1,
               width: PosTextSize.size1,
