@@ -13,6 +13,8 @@ import 'package:flutter_usb_printer/flutter_usb_printer.dart';
 
 enum PrintErrorType { noPrinters, cancelled, printFailed, exception }
 
+enum BarcodeType { qr, code39, code128 }
+
 class PrintResult {
   final bool success;
   final String? successMessage;
@@ -409,9 +411,8 @@ class PrinterService {
       bytes += generator.text('');
     }
 
-    if (_isQrCodeTitle(columnTitle)) {
-      final qrContent = _getQrCodeContentFromTitle(columnTitle!);
-      bytes += generator.qrcode(qrContent);
+    if (_isBarcodeTitle(columnTitle)) {
+      bytes += _addBarcodeToReceipt(generator, columnTitle!, null);
       bytes += generator.text('');
     } else {
       final title = columnTitle ?? 'TaskWire Column';
@@ -445,8 +446,8 @@ class PrinterService {
       for (int i = 0; i < tasks.length; i++) {
         final task = tasks[i];
 
-        if (_isQrCodeTask(task)) {
-          bytes += _addQrCodeToReceipt(generator, task);
+        if (_isBarcodeTask(task)) {
+          bytes += _addBarcodeToReceipt(generator, task.title, task);
         } else {
           bytes += generator.text(
             '[${task.isCompleted ? 'X' : ' '}] ${task.title}',
@@ -490,8 +491,8 @@ class PrinterService {
     for (final subtask in subtasks) {
       final indent = '  ' * level;
       
-      if (_isQrCodeTask(subtask)) {
-        bytes += _addQrCodeToReceipt(generator, subtask, indent);
+      if (_isBarcodeTask(subtask)) {
+        bytes += _addBarcodeToReceipt(generator, subtask.title, subtask, indent);
       } else {
         bytes += generator.text(
           '$indent[${subtask.isCompleted ? 'X' : ' '}] ${subtask.title}',
@@ -537,9 +538,8 @@ class PrinterService {
       bytes += generator.text('');
     }
 
-    if (_isQrCodeTitle(columnTitle)) {
-      final qrContent = _getQrCodeContentFromTitle(columnTitle!);
-      bytes += generator.qrcode(qrContent);
+    if (_isBarcodeTitle(columnTitle)) {
+      bytes += _addBarcodeToReceipt(generator, columnTitle!, null);
       bytes += generator.text('');
     } else {
       final title = columnTitle ?? 'TaskWire Column';
@@ -573,8 +573,8 @@ class PrinterService {
       for (int i = 0; i < tasks.length; i++) {
         final task = tasks[i];
 
-        if (_isQrCodeTask(task)) {
-          bytes += _addQrCodeToReceipt(generator, task);
+        if (_isBarcodeTask(task)) {
+          bytes += _addBarcodeToReceipt(generator, task.title, task);
         } else {
           bytes += generator.text(
             '[${task.isCompleted ? 'X' : ' '}] ${task.title}',
@@ -861,8 +861,8 @@ class PrinterService {
       bytes += generator.text('');
     }
 
-    if (_isQrCodeTask(task)) {
-      bytes += _addQrCodeToReceipt(generator, task);
+    if (_isBarcodeTask(task)) {
+      bytes += _addBarcodeToReceipt(generator, task.title, task);
     } else {
       bytes += _wrapTextForSize2(
         generator,
@@ -920,8 +920,8 @@ class PrinterService {
       bytes += generator.text('');
     }
 
-    if (_isQrCodeTask(task)) {
-      bytes += _addQrCodeToReceipt(generator, task);
+    if (_isBarcodeTask(task)) {
+      bytes += _addBarcodeToReceipt(generator, task.title, task);
     } else {
       bytes += _wrapTextForSize2(
         generator,
@@ -969,8 +969,8 @@ class PrinterService {
     for (final subtask in subtasks) {
       final indent = '  ' * level;
       
-      if (_isQrCodeTask(subtask)) {
-        bytes += _addQrCodeToReceipt(generator, subtask, indent);
+      if (_isBarcodeTask(subtask)) {
+        bytes += _addBarcodeToReceipt(generator, subtask.title, subtask, indent);
       } else {
         bytes += generator.text(
           '$indent[${subtask.isCompleted ? 'X' : ' '}] ${subtask.title}',
@@ -989,43 +989,130 @@ class PrinterService {
     return bytes;
   }
 
-  bool _isQrCodeTask(Task task) {
-    return task.title.startsWith('QR:');
+  bool _isBarcodeTask(Task task) {
+    return _getBarcodeType(task.title) != null;
   }
 
-  String _getQrCodeContent(Task task) {
-    if (!_isQrCodeTask(task)) return '';
-    return task.title.substring(3).trim();
+  bool _isBarcodeTitle(String? title) {
+    return title != null && _getBarcodeType(title) != null;
   }
 
-  bool _isQrCodeTitle(String? title) {
-    return title?.startsWith('QR:') ?? false;
+  BarcodeType? _getBarcodeType(String content) {
+    if (content.startsWith('QR:')) {
+      return BarcodeType.qr;
+    } else if (content.startsWith('CODE39:')) {
+      return BarcodeType.code39;
+    } else if (content.startsWith('CODE128:')) {
+      return BarcodeType.code128;
+    }
+    return null;
   }
 
-  String _getQrCodeContentFromTitle(String title) {
-    if (!_isQrCodeTitle(title)) return '';
-    return title.substring(3).trim();
-  }
-
-  List<int> _addQrCodeToReceipt(Generator generator, Task task, [String? indent]) {
-    List<int> bytes = [];
-    final qrContent = _getQrCodeContent(task);
+  String _getBarcodeContent(String content) {
+    final type = _getBarcodeType(content);
+    if (type == null) return '';
     
-    if (qrContent.isEmpty) {
-      bytes += generator.text(
-        '${indent ?? ''}[${task.isCompleted ? 'X' : ' '}] ${task.title}',
-        styles: PosStyles(
-          height: PosTextSize.size1,
-          width: PosTextSize.size1,
-          bold: task.isCompleted,
-        ),
-      );
+    switch (type) {
+      case BarcodeType.qr:
+        return content.substring(3).trim();
+      case BarcodeType.code39:
+        return content.substring(7).trim();
+      case BarcodeType.code128:
+        return content.substring(8).trim();
+    }
+  }
+
+  List<int> _convertToCode39Data(String content) {
+    List<int> result = [];
+    for (int i = 0; i < content.length; i++) {
+      final char = content[i];
+      final codeUnit = char.codeUnitAt(0);
+      
+      if (codeUnit >= 48 && codeUnit <= 57) {
+        result.add(int.parse(char));
+      } else if (codeUnit >= 65 && codeUnit <= 90) {
+        result.add(codeUnit - 55);
+      } else if (codeUnit >= 97 && codeUnit <= 122) {
+        result.add(codeUnit - 87);
+      }
+    }
+    return result;
+  }
+
+  List<dynamic> _convertToCode128Data(String content) {
+    String processedContent = content.replaceAll(' ', '');
+    
+    if (!processedContent.startsWith('{A') && !processedContent.startsWith('{B') && !processedContent.startsWith('{C')) {
+      processedContent = '{B$processedContent';
+    }
+    
+    return processedContent.split('');
+  }
+
+  List<int> _addBarcodeToReceipt(Generator generator, String content, Task? task, [String? indent]) {
+    List<int> bytes = [];
+    final barcodeType = _getBarcodeType(content);
+    final barcodeContent = _getBarcodeContent(content);
+    
+    if (barcodeType == null || barcodeContent.isEmpty) {
+      if (task != null) {
+        bytes += generator.text(
+          '${indent ?? ''}[${task.isCompleted ? 'X' : ' '}] $content',
+          styles: PosStyles(
+            height: PosTextSize.size1,
+            width: PosTextSize.size1,
+            bold: task.isCompleted,
+          ),
+        );
+      } else {
+        bytes += generator.text(
+          '${indent ?? ''}$content',
+          styles: PosStyles(
+            height: PosTextSize.size1,
+            width: PosTextSize.size1,
+          ),
+        );
+      }
       return bytes;
     }
 
-    bytes += generator.qrcode(qrContent);
+    switch (barcodeType) {
+      case BarcodeType.qr:
+        bytes += generator.qrcode(barcodeContent);
+        break;
+      case BarcodeType.code39:
+        try {
+          final barData = _convertToCode39Data(barcodeContent);
+          bytes += generator.barcode(Barcode.code39(barData));
+        } catch (e) {
+          LoggingService.error('Error generating Code 39 barcode: $e');
+          bytes += generator.text(
+            '${indent ?? ''}Code 39 Error: $barcodeContent',
+            styles: PosStyles(
+              height: PosTextSize.size1,
+              width: PosTextSize.size1,
+            ),
+          );
+        }
+        break;
+      case BarcodeType.code128:
+        try {
+          final barData = _convertToCode128Data(barcodeContent);
+          bytes += generator.barcode(Barcode.code128(barData));
+        } catch (e) {
+          LoggingService.error('Error generating Code 128 barcode: $e');
+          bytes += generator.text(
+            '${indent ?? ''}Code 128 Error: $barcodeContent',
+            styles: PosStyles(
+              height: PosTextSize.size1,
+              width: PosTextSize.size1,
+            ),
+          );
+        }
+        break;
+    }
+    
     bytes += generator.text('');
-
     return bytes;
   }
 
