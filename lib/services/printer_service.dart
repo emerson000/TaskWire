@@ -998,11 +998,13 @@ class PrinterService {
   }
 
   BarcodeType? _getBarcodeType(String content) {
-    if (content.startsWith('QR:')) {
+    final upperContent = content.toUpperCase();
+    
+    if (upperContent.startsWith('QR:')) {
       return BarcodeType.qr;
-    } else if (content.startsWith('CODE39:')) {
+    } else if (upperContent.startsWith('CODE39:') || upperContent.startsWith('C39:')) {
       return BarcodeType.code39;
-    } else if (content.startsWith('CODE128:')) {
+    } else if (upperContent.startsWith('CODE128:') || upperContent.startsWith('C128:')) {
       return BarcodeType.code128;
     }
     return null;
@@ -1012,14 +1014,27 @@ class PrinterService {
     final type = _getBarcodeType(content);
     if (type == null) return '';
     
+    final upperContent = content.toUpperCase();
+    
     switch (type) {
       case BarcodeType.qr:
         return content.substring(3).trim();
       case BarcodeType.code39:
-        return content.substring(7).trim();
+        if (upperContent.startsWith('CODE39:')) {
+          return content.substring(7).trim();
+        } else if (upperContent.startsWith('C39:')) {
+          return content.substring(4).trim();
+        }
+        break;
       case BarcodeType.code128:
-        return content.substring(8).trim();
+        if (upperContent.startsWith('CODE128:')) {
+          return content.substring(8).trim();
+        } else if (upperContent.startsWith('C128:')) {
+          return content.substring(5).trim();
+        }
+        break;
     }
+    return '';
   }
 
   List<int> _convertToCode39Data(String content) {
