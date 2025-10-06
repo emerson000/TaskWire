@@ -1,0 +1,17 @@
+icon: assets/icon/icon.png
+summary: A 
+group: Application/Emulator
+vendor: TaskWire
+packager: TaskWire
+packagerEmail: taskwire@centercad.com
+license: MIT
+url: https://github.com/emerson000/taskwire
+
+display_name: TaskWire
+
+keywords:
+  - TaskWire
+
+generic_name: Task Manager
+
+startup_notify: false

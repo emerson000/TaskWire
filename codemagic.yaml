@@ -129,3 +129,51 @@ workflows:
         script: flutter pub run msix:create
     artifacts:
       - build/windows/**/*.msix
+
+  linux-workflow:
+    name: Linux Release Workflow
+    instance_type: linux_x2
+    max_build_duration: 15
+    environment:
+      groups:
+        - default
+      flutter: master
+      vars:
+          CM_TAG: $CM_TAG
+    cache:
+      cache_paths:
+        - ~/.pub-cache
+    scripts:
+      - name : Install AppImage
+        script: |
+          sudo apt install locate wget
+          wget -O appimagetool "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage"
+          chmod +x appimagetool
+          sudo mv appimagetool /usr/local/bin/
+      - name: Install Fastforge
+        script: dart pub global activate fastforge && export PATH=$PATH:$HOME/.pub-cache/bin
+      - name: Build deb package
+        script: fastforge package --platform linux --targets deb,rpm
+      - name: Publish to GitHub
+        script: | 
+          #!/usr/bin/env zsh
+
+          # Publish only for tag builds
+          if [ -z ${CM_TAG} ]; then
+            echo "Not a tag build, will not publish GitHub release"
+            exit 0
+          fi
+
+          gh release upload "${CM_TAG}" \
+            dist/**/taskwire*.deb \
+            dist/**/taskwire*.rpm
+    artifacts:
+      - dist/**/taskwire*.deb
+      - dist/**/taskwire*.rpm
+    triggering:
+        events:
+          - tag
+        branch_patterns:
+          - pattern: "main"
+            include: true
+            source: true

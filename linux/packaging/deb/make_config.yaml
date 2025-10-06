@@ -1,0 +1,31 @@
+display_name: TaskWire
+package_name: taskwire
+
+maintainer:
+  name: TaskWire
+  email: taskwire@centercad.com
+
+priority: optional
+
+section: x11
+
+installed_size: 15700
+
+essential: false
+
+icon: assets/icon/icon.png
+
+postuninstall_scripts:
+  - echo "Sorry to see you go."
+
+keywords:
+  - TaskWire
+  - Task Wire
+
+generic_name: Task Manager
+
+categories:
+  - Development
+  - Utility
+
+startup_notify: false
