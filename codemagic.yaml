@@ -163,7 +163,7 @@ workflows:
       - name: Install Fastforge
         script: dart pub global activate fastforge && export PATH=$PATH:$HOME/.pub-cache/bin
       - name: Build deb package
-        script: fastforge package --platform linux --targets deb
+        script: fastforge package --platform linux --targets deb,appimage
       - name: Publish to GitHub
         script: | 
           #!/usr/bin/env zsh
