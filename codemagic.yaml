@@ -186,9 +186,11 @@ workflows:
 
           # Upload artifacts to the release
           gh release upload "${CM_TAG}" \
-            dist/**/taskwire*.deb
+            dist/**/taskwire*.deb \
+            dist/**/taskwire*.AppImage
     artifacts:
       - dist/**/taskwire*.deb
+      - dist/**/taskwire*.AppImage
     triggering:
         events:
           - tag
