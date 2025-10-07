@@ -76,15 +76,6 @@ mixin TaskViewMixin<T extends StatefulWidget> on State<T> {
 
       if (mounted) {
         onRefresh();
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              '"${draggedTask.title}" moved to "${targetTask.title}"',
-            ),
-            duration: const Duration(seconds: 2),
-          ),
-        );
       }
     } catch (e) {
       if (mounted) {
@@ -110,17 +101,6 @@ mixin TaskViewMixin<T extends StatefulWidget> on State<T> {
 
       if (mounted) {
         onRefresh();
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              targetParent != null
-                  ? '"${draggedTask.title}" moved to "${targetParent.title}"'
-                  : '"${draggedTask.title}" moved to root level',
-            ),
-            duration: const Duration(seconds: 2),
-          ),
-        );
       }
     } catch (e) {
       if (mounted) {
