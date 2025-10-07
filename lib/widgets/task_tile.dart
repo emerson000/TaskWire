@@ -51,7 +51,7 @@ class TaskTile extends StatelessWidget {
   }
 
   Widget _buildDraggableWidget(BuildContext context) {
-    if (isWindows) {
+    if (isDesktop) {
       return Draggable<Task>(
         data: task,
         feedback: _buildDragFeedback(context),
