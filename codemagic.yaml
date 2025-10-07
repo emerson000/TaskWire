@@ -91,7 +91,17 @@ workflows:
               Write-Host "Error: CM_TAG is empty"
               exit 0
             }
-            gh release create "$env:CM_TAG" --title "TaskWire $env:CM_TAG" --notes "TaskWire Windows release $env:CM_TAG"
+            
+            # Check if release exists, create if it doesn't
+            try {
+              gh release view "$env:CM_TAG" 2>$null | Out-Null
+              Write-Host "Release $env:CM_TAG already exists, uploading artifacts"
+            } catch {
+              Write-Host "Creating GitHub release $env:CM_TAG"
+              gh release create "$env:CM_TAG" --title "TaskWire $env:CM_TAG" --notes "TaskWire $env:CM_TAG"
+            }
+            
+            # Upload artifacts to the release
             gh release upload "$env:CM_TAG" windows/installer/TaskWire.msi
       artifacts:
         - windows/installer/TaskWire.msi
@@ -153,7 +163,7 @@ workflows:
       - name: Install Fastforge
         script: dart pub global activate fastforge && export PATH=$PATH:$HOME/.pub-cache/bin
       - name: Build deb package
-        script: fastforge package --platform linux --targets deb,rpm
+        script: fastforge package --platform linux --targets deb
       - name: Publish to GitHub
         script: | 
           #!/usr/bin/env zsh
@@ -164,12 +174,21 @@ workflows:
             exit 0
           fi
 
+          # Check if release exists, create if it doesn't
+          if ! gh release view "${CM_TAG}" > /dev/null 2>&1; then
+            echo "Creating GitHub release ${CM_TAG}"
+            gh release create "${CM_TAG}" \
+              --title "TaskWire ${CM_TAG}" \
+              --notes "TaskWire release ${CM_TAG}"
+          else
+            echo "Release ${CM_TAG} already exists, uploading artifacts"
+          fi
+
+          # Upload artifacts to the release
           gh release upload "${CM_TAG}" \
-            dist/**/taskwire*.deb \
-            dist/**/taskwire*.rpm
+            dist/**/taskwire*.deb
     artifacts:
       - dist/**/taskwire*.deb
-      - dist/**/taskwire*.rpm
     triggering:
         events:
           - tag
